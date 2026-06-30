@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Прачечная · Трекер</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#11151a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Прачечная">
+<style>
+  :root{
+    --bg: #11151a;
+    --panel: #171c23;
+    --panel-2: #1d242c;
+    --line: #2a323c;
+    --line-soft: #232a32;
+    --text: #eef1f4;
+    --text-dim: #9aa6b2;
+    --text-faint: #5e6b78;
+    --steam: #5fb8c9;
+    --steam-dim: #2b4a52;
+    --amber: #e3a64f;
+    --amber-dim: #4a3a22;
+    --green: #6fbf78;
+    --red: #d9645f;
+    --radius: 14px;
+    --radius-sm: 9px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  body{ margin:0; background:var(--bg); color:var(--text); min-height:100vh; padding-bottom:84px; }
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:rgba(17,21,26,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line-soft); padding:16px 18px 14px;
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  .topbar .mark{ font-size:11px; letter-spacing:.16em; color:var(--steam); font-weight:700; text-transform:uppercase;}
+  .topbar h1{ font-size:19px; margin:2px 0 0; font-weight:700; letter-spacing:-0.01em;}
+  .topbar .sub{ font-size:11px; color:var(--text-faint); }
+  .view{ padding:16px; max-width:520px; margin:0 auto; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:13px 14px; }
+  .stat .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-faint); margin-bottom:6px;}
+  .stat .val{ font-size:21px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat .val.steam{ color:var(--steam); }
+  .stat .val.amber{ color:var(--amber); }
+  .stat .sub2{ font-size:10.5px; color:var(--text-faint); margin-top:4px; }
+  .section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--text-faint); margin:22px 2px 10px; display:flex; justify-content:space-between; align-items:center; }
+  .section-title .more{ color:var(--steam); text-transform:none; letter-spacing:0; font-size:12px; cursor:pointer;}
+  .point-card{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:13px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .point-card:active{ border-color:var(--steam-dim); }
+  .point-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .point-card .pname{ font-size:15px; font-weight:600; flex:1; min-width:0;}
+  .point-card .pmeta{ font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+  .point-card .pmoney{ text-align:right; }
+  .point-card .pmoney .amt{ font-size:15px; font-weight:700; color:var(--amber); font-variant-numeric:tabular-nums;}
+  .point-card .pmoney .amt-sub{ font-size:10.5px; color:var(--text-faint); }
+  .chev{ color:var(--text-faint); font-size:18px; }
+  .btn{ border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:var(--radius-sm); padding:11px 14px; font-size:14px; font-weight:600; cursor:pointer; text-align:center; }
+  .btn:active{ transform:scale(0.98); }
+  .btn-primary{ background:var(--steam); color:#0b1f23; border-color:var(--steam); }
+  .btn-ghost{ background:transparent; color:var(--text-dim); border:1px solid var(--line-soft); font-weight:500;}
+  .btn-block{ width:100%; }
+  .btn-sm{ padding:7px 11px; font-size:12.5px; }
+  label.f{ display:block; margin-bottom:12px; }
+  label.f .flabel{ font-size:11.5px; color:var(--text-faint); margin-bottom:5px; display:block; }
+  input, select, textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; font-family:inherit; }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--steam); }
+  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .back-btn{ font-size:13px; color:var(--steam); cursor:pointer; font-weight:600; }
+  .entry-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px; gap:8px; }
+  .entry-row:last-child{ border-bottom:none; }
+  .entry-row .ed{ color:var(--text-dim); width:56px; flex-shrink:0; }
+  .entry-row .ek{ color:var(--text); flex:1; min-width:0; }
+  .entry-row .eitems{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .entry-row .ep{ color:var(--amber); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+  .entry-row .edel{ color:var(--text-faint); margin-left:4px; cursor:pointer; font-size:16px; }
+  .card{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin-bottom:14px;}
+  .tabbar{ position:fixed; bottom:0; left:0; right:0; z-index:30; background:rgba(17,21,26,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line-soft); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
+  .tab{ flex:1; text-align:center; padding:6px 2px; cursor:pointer; color:var(--text-faint); font-size:10.5px; font-weight:600; letter-spacing:.01em; }
+  .tab .ic{ font-size:19px; display:block; margin-bottom:3px; }
+  .tab.active{ color:var(--steam); }
+  .empty{ text-align:center; padding:36px 10px; color:var(--text-faint); font-size:13.5px; }
+  .empty .ic{ font-size:28px; display:block; margin-bottom:10px; opacity:.6;}
+  .toast{ position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:9px 16px; border-radius:20px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .item-grid{ display:grid; grid-template-columns:1fr 64px; gap:8px; align-items:center; margin-bottom:7px;}
+  .item-grid .iname{ font-size:13px; color:var(--text-dim); }
+  .seg{ display:flex; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; margin-bottom:12px;}
+  .seg div{ flex:1; text-align:center; padding:9px 4px; font-size:12.5px; font-weight:600; color:var(--text-dim); cursor:pointer; }
+  .seg div.active{ background:var(--steam-dim); color:var(--steam); }
+  .addrow{ display:flex; gap:8px; margin-top:4px; }
+  .addrow input{ flex:1; }
+  .hint{ font-size:11.5px; color:var(--text-faint); line-height:1.5; margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="mark">Учёт стирки</div>
+    <h1 id="topTitle">Дашборд</h1>
+  </div>
+  <div class="sub" id="todayDate"></div>
+</div>
+<div class="view" id="view"></div>
+<div class="toast" id="toast"></div>
+<div class="tabbar">
+  <div class="tab active" data-tab="dashboard"><span class="ic">&#9679;</span>Дашборд</div>
+  <div class="tab" data-tab="points"><span class="ic">&#9632;</span>Точки</div>
+  <div class="tab" data-tab="restirka"><span class="ic">&#9851;</span>Перестирка</div>
+  <div class="tab" data-tab="expenses"><span class="ic">&#8372;</span>Расходы</div>
+  <div class="tab" data-tab="driver"><span class="ic">&#9658;</span>Водитель</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'laundry-app-state-v2';
+const DOT_COLORS = ['#5fb8c9','#e3a64f','#d9645f','#6fbf78','#8a7fd6','#d68fc0','#7ea6d9','#c9a45f'];
+
+const ITEMS_RESTORAN = ['Ошибори','Салфетка','Микрофибра','Фартук','Сидушка','Чехол на кресло','Униформа','Брюки','Куртка повара','Плед','Скатерть','Толстовка','Футболка','Шторы','Коврик'];
+const ITEMS_BRUNO = ['Салфетка белая','Салфетка коричн.','Скатерть белая','Скатерть коричн.','Ошибори','Натирка синяя','Микра черная','Микра красная','Микра синяя','Микра зеленая','Китель повара','Брюки повара','Фартук','Перчатки','Нагрудник','Рубашка','Чехол на резинке','Платье','Брюки клас./джинсы','Штора','Кофта/джемпер','Подушка/сидушка','Плед','Ковер','Пиджак','Мультон'];
+const ITEMS_TEREMOK = ['Бережковский халаты','Зубовский комплект','Зубовский туника','Зубовский колпак','Зубовский фартук','Зубовский футболка'];
+const ITEMS_PADEL = ['Полотенце'];
+const ITEMS_TD = ['Салфетка','Скатерть','Полотенце'];
+
+function mkItems(names){ return names.map(n=>({id: n.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_'), name:n})); }
+
+const DEFAULT_STATE = {
+  points: [
+    {id:'saray',   name:'Сарай 1',      pricingType:'abonement', tariff:100, abonementFee:85000, capKg:800, items:mkItems(ITEMS_RESTORAN)},
+    {id:'moro',    name:'Моро',         pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
+    {id:'bron',    name:'Брон',         pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
+    {id:'bruno',   name:'Бруно',        pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_BRUNO)},
+    {id:'amber',   name:'Эмбер',        pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
+    {id:'padel',   name:'Падел',        pricingType:'perkg',     tariff:80,  abonementFee:0, capKg:0, items:mkItems(ITEMS_PADEL)},
+    {id:'teremok', name:'Теремок',      pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_TEREMOK)},
+    {id:'td',      name:'Торговый дом', pricingType:'perkg',     tariff:150, abonementFee:0, capKg:0, items:mkItems(ITEMS_TD)},
+  ],
+  entries: {},
+  restirkaItems: [
+    {id:'salfetka', name:'Салфетка', weight:50},
+    {id:'oshibori',  name:'Ошибори', weight:50},
+    {id:'skatert',   name:'Скатерть', weight:280},
+  ],
+  restirka: {},
+  restirkaTariff: 100,
+  expenses: [],
+  expenseCategories: ['Порошок цветной','Порошок белый','Белизна','Пакеты','Прочее'],
+  driverNotes: [],
+};
+
+let state = null;
+let view = {tab:'dashboard', pointId:null};
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state = raw ? JSON.parse(raw) : structuredClone(DEFAULT_STATE);
+  }catch(e){
+    state = structuredClone(DEFAULT_STATE);
+  }
+  for(const k in DEFAULT_STATE){ if(!(k in state)) state[k] = structuredClone(DEFAULT_STATE[k]); }
+  state.points.forEach(p=>{ if(!p.items) p.items=[]; if(p.pricingType===undefined) p.pricingType='perkg'; if(p.abonementFee===undefined) p.abonementFee=0; if(p.capKg===undefined) p.capKg=0; });
+  render();
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ showToast('Не удалось сохранить: ' + e.message); }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function fmt(n){ return Math.round((n||0)*100)/100; }
+function rub(n){ return Math.round(n||0).toLocaleString('ru-RU') + ' ₽'; }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+function thisMonthKey(){ return todayStr().slice(0,7); }
+function fmtDate(d){ const [y,m,day]=d.split('-'); return day+'.'+m; }
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    view = {tab:t.dataset.tab, pointId:null};
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    render();
+  });
+});
+
+function pointEntries(id){ return state.entries[id] || []; }
+function pointMonthEntries(id, mk){ return pointEntries(id).filter(e=>monthKey(e.date)===mk); }
+
+function pointMonthTotals(id, mk){
+  const es = pointMonthEntries(id, mk);
+  const p = state.points.find(x=>x.id===id);
+  const kg = fmt(es.reduce((s,e)=>s+(e.kg||0),0));
+  const days = es.length;
+  let rubTotal = 0, subLabel = '';
+  if(p.pricingType === 'abonement'){
+    const overKg = Math.max(0, kg - p.capKg);
+    rubTotal = p.abonementFee + overKg*p.tariff;
+    subLabel = overKg>0 ? `+${fmt(overKg)} кг сверх` : `до ${p.capKg} кг`;
+  } else {
+    rubTotal = kg*p.tariff;
+    subLabel = p.tariff+'₽/кг';
+  }
+  return {kg, rub:rubTotal, days, subLabel};
+}
+
+function render(){
+  const titles = {dashboard:'Дашборд', points:'Точки', restirka:'Перестирка', expenses:'Расходы', driver:'Водитель'};
+  document.getElementById('topTitle').textContent = view.pointId ? (state.points.find(p=>p.id===view.pointId)?.name||'') : titles[view.tab];
+  const el = document.getElementById('view');
+  el.innerHTML = '';
+  if(view.tab==='dashboard') renderDashboard(el);
+  else if(view.tab==='points') view.pointId ? renderPointDetail(el) : renderPoints(el);
+  else if(view.tab==='restirka') renderRestirka(el);
+  else if(view.tab==='expenses') renderExpenses(el);
+  else if(view.tab==='driver') renderDriver(el);
+}
+
+function renderDashboard(el){
+  const mk = thisMonthKey();
+  let totalKg=0, totalRub=0, totalDays=0;
+  state.points.forEach(p=>{ const t = pointMonthTotals(p.id, mk); totalKg += t.kg; totalRub += t.rub; totalDays += t.days; });
+  const expMonth = state.expenses.filter(e=>monthKey(e.date)===mk).reduce((s,e)=>s+(e.amount||0),0);
+  const restMonth = Object.values(state.restirka).flat().filter(r=>monthKey(r.date)===mk).reduce((s,r)=>s+(r.rub||0),0);
+
+  el.innerHTML = `
+    <div class="grid2">
+      <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${fmt(totalKg)}</div></div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(totalRub)}</div></div>
+      <div class="stat"><div class="label">Выездов</div><div class="val">${totalDays}</div></div>
+      <div class="stat"><div class="label">Расходы прачечной</div><div class="val">${rub(expMonth)}</div></div>
+    </div>
+    <div class="section-title"><span>Точки · этот месяц</span><span class="more" data-go="points">все →</span></div>
+    <div id="dashPoints"></div>
+    ${restMonth ? `<div class="section-title">Перестирка</div><div class="stat"><div class="label">За месяц</div><div class="val amber">${rub(restMonth)}</div></div>` : ''}
+  `;
+  const dp = el.querySelector('#dashPoints');
+  state.points.forEach((p,i)=>dp.appendChild(pointCardEl(p, pointMonthTotals(p.id, mk), i)));
+  el.querySelector('[data-go="points"]').addEventListener('click', ()=>{
+    view={tab:'points', pointId:null};
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab==='points'));
+    render();
+  });
+}
+
+function pointCardEl(p, t, i){
+  const div = document.createElement('div');
+  div.className = 'point-card';
+  div.innerHTML = `
+    <div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div>
+    <div style="flex:1; min-width:0;">
+      <div class="pname">${p.name}</div>
+      <div class="pmeta">${t.kg} кг · ${t.days} ${t.days===1?'выезд':'выездов'}</div>
+    </div>
+    <div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div>
+    <div class="chev">›</div>
+  `;
+  div.addEventListener('click', ()=>{
+    view = {tab:'points', pointId:p.id};
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab==='points'));
+    render();
+  });
+  return div;
+}
+
+function renderPoints(el){
+  const mk = thisMonthKey();
+  const wrap = document.createElement('div');
+  state.points.forEach((p,i)=>wrap.appendChild(pointCardEl(p, pointMonthTotals(p.id, mk), i)));
+  el.appendChild(wrap);
+}
+
+function renderPointDetail(el){
+  const p = state.points.find(x=>x.id===view.pointId);
+  const entries = pointEntries(p.id).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const mk = thisMonthKey();
+  const t = pointMonthTotals(p.id, mk);
+
+  el.innerHTML = `
+    <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span></div>
+    <div class="grid2">
+      <div class="stat"><div class="label">Месяц, кг</div><div class="val steam">${t.kg}</div></div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div><div class="sub2">${t.subLabel}</div></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="seg">
+        <div data-pt="perkg" class="${p.pricingType==='perkg'?'active':''}">За кг</div>
+        <div data-pt="abonement" class="${p.pricingType==='abonement'?'active':''}">Абонемент</div>
+      </div>
+      <div id="pricingFields"></div>
+    </div>
+
+    <div class="card">
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="dateInput" value="${todayStr()}"></label>
+      <label class="f"><span class="flabel">Вес, кг (по весам)</span><input type="number" id="kgInput" placeholder="0" step="0.1"></label>
+      <div class="section-title" style="margin:14px 0 6px;">Позиции, шт</div>
+      <div id="itemFields"></div>
+      <div class="addrow">
+        <input type="text" id="newItemName" placeholder="добавить позицию...">
+        <button class="btn btn-sm" id="addItemBtn">+</button>
+      </div>
+      <label class="f" style="margin-top:12px;"><span class="flabel">Заметка</span><input type="text" id="noteInput" placeholder="срочно, доставка и т.д."></label>
+      <button class="btn btn-primary btn-block" id="addEntryBtn">Добавить запись</button>
+    </div>
+
+    <div class="section-title">История</div>
+    <div class="card" id="historyCard" style="padding:6px 14px;"></div>
+  `;
+
+  el.querySelector('#backBtn').addEventListener('click', ()=>{ view.pointId=null; render(); });
+
+  function renderPricingFields(){
+    const pf = el.querySelector('#pricingFields');
+    if(p.pricingType==='abonement'){
+      pf.innerHTML = `
+        <label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="abonementFee" value="${p.abonementFee}" step="1000"></label>
+        <label class="f"><span class="flabel">Включено кг/мес</span><input type="number" id="capKg" value="${p.capKg}" step="10"></label>
+        <label class="f"><span class="flabel">Доплата за кг сверх лимита, ₽</span><input type="number" id="tariffInput" value="${p.tariff}" step="1"></label>
+      `;
+      pf.querySelector('#abonementFee').addEventListener('change', e=>{ p.abonementFee=parseFloat(e.target.value)||0; saveState(); render(); });
+      pf.querySelector('#capKg').addEventListener('change', e=>{ p.capKg=parseFloat(e.target.value)||0; saveState(); render(); });
+      pf.querySelector('#tariffInput').addEventListener('change', e=>{ p.tariff=parseFloat(e.target.value)||0; saveState(); render(); });
+    } else {
+      pf.innerHTML = `<label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="tariffInput" value="${p.tariff}" step="1"></label>`;
+      pf.querySelector('#tariffInput').addEventListener('change', e=>{ p.tariff=parseFloat(e.target.value)||0; saveState(); render(); });
+    }
+  }
+  renderPricingFields();
+  el.querySelectorAll('.seg div').forEach(d=>{
+    d.addEventListener('click', ()=>{ p.pricingType = d.dataset.pt; saveState(); render(); });
+  });
+
+  const ifld = el.querySelector('#itemFields');
+  function renderItemFields(){
+    ifld.innerHTML='';
+    p.items.forEach(it=>{
+      const row = document.createElement('div');
+      row.className = 'item-grid';
+      row.innerHTML = `<span class="iname">${it.name}</span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
+      ifld.appendChild(row);
+    });
+  }
+  renderItemFields();
+
+  el.querySelector('#addItemBtn').addEventListener('click', ()=>{
+    const inp = el.querySelector('#newItemName');
+    const name = inp.value.trim();
+    if(!name) return;
+    const id = name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
+    p.items.push({id, name});
+    inp.value='';
+    saveState(); renderItemFields();
+  });
+
+  el.querySelector('#addEntryBtn').addEventListener('click', ()=>{
+    const date = el.querySelector('#dateInput').value || todayStr();
+    const kg = parseFloat(el.querySelector('#kgInput').value);
+    const note = el.querySelector('#noteInput').value.trim();
+    const items = {};
+    el.querySelectorAll('[data-item]').forEach(inp=>{
+      const n = parseInt(inp.value)||0;
+      if(n>0) items[inp.dataset.item]=n;
+    });
+    if(!kg && !Object.keys(items).length){ showToast('Укажи вес или позиции'); return; }
+    if(!state.entries[p.id]) state.entries[p.id]=[];
+    state.entries[p.id].push({date, kg: kg||0, items, note});
+    saveState(); showToast('Запись добавлена'); render();
+  });
+
+  const hc = el.querySelector('#historyCard');
+  if(!entries.length){
+    hc.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет записей по этой точке</div>`;
+  } else {
+    entries.slice(0,60).forEach((e)=>{
+      const row = document.createElement('div');
+      row.className = 'entry-row';
+      const realIdx = state.entries[p.id].indexOf(e);
+      const itemsStr = e.items && Object.keys(e.items).length
+        ? Object.entries(e.items).map(([iid,n])=>{
+            const it = p.items.find(x=>x.id===iid);
+            return (it?it.name:iid)+' '+n;
+          }).join(', ')
+        : '';
+      const dayRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : null;
+      row.innerHTML = `
+        <span class="ed">${fmtDate(e.date)}</span>
+        <span class="ek">${e.kg?e.kg+' кг':''}${e.note?' · '+e.note:''}${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
+        <span class="ep">${dayRub!==null ? rub(dayRub) : '—'}</span>
+        <span class="edel" data-idx="${realIdx}">✕</span>
+      `;
+      row.querySelector('.edel').addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        state.entries[p.id].splice(realIdx,1);
+        saveState(); render();
+      });
+      hc.appendChild(row);
+    });
+  }
+}
+
+function renderRestirka(el){
+  const mk = thisMonthKey();
+  const allMonth = Object.entries(state.restirka).flatMap(([pid,arr])=>arr.filter(r=>monthKey(r.date)===mk).map(r=>({...r,pid})));
+  const totalKg = fmt(allMonth.reduce((s,r)=>s+r.kg,0));
+  const totalRub = allMonth.reduce((s,r)=>s+r.rub,0);
+
+  el.innerHTML = `
+    <div class="grid2">
+      <div class="stat"><div class="label">Перестирка, месяц</div><div class="val steam">${totalKg} кг</div></div>
+      <div class="stat"><div class="label">Сумма</div><div class="val amber">${rub(totalRub)}</div></div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <label class="f"><span class="flabel">Ресторан</span>
+        <select id="rPoint">${state.points.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
+      </label>
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="rDate" value="${todayStr()}"></label>
+      <div id="rItems"></div>
+      <div class="hint">Тариф перестирки: ${state.restirkaTariff} ₽/кг</div>
+      <button class="btn btn-primary btn-block" id="rAddBtn">Добавить</button>
+    </div>
+    <div class="section-title">Последние записи</div>
+    <div class="card" id="rHistory" style="padding:6px 14px;"></div>
+  `;
+  const ri = el.querySelector('#rItems');
+  state.restirkaItems.forEach(it=>{
+    const row = document.createElement('div');
+    row.className = 'item-grid';
+    row.innerHTML = `<span class="iname">${it.name} <span style="color:var(--text-faint)">(${it.weight} г)</span></span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
+    ri.appendChild(row);
+  });
+  el.querySelector('#rAddBtn').addEventListener('click', ()=>{
+    const pid = el.querySelector('#rPoint').value;
+    const date = el.querySelector('#rDate').value || todayStr();
+    const qty = {}; let kg = 0;
+    el.querySelectorAll('[data-item]').forEach(inp=>{
+      const n = parseInt(inp.value)||0;
+      if(n>0){ qty[inp.dataset.item]=n; const item = state.restirkaItems.find(x=>x.id===inp.dataset.item); kg += n*item.weight/1000; }
+    });
+    if(!Object.keys(qty).length){ showToast('Укажи количество хотя бы по одной позиции'); return; }
+    kg = fmt(kg);
+    const r2 = fmt(kg*state.restirkaTariff);
+    if(!state.restirka[pid]) state.restirka[pid]=[];
+    state.restirka[pid].push({date, qty, kg, rub:r2});
+    saveState(); showToast('Добавлено'); render();
+  });
+
+  const rh = el.querySelector('#rHistory');
+  const sorted = allMonth.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!sorted.length){
+    rh.innerHTML = `<div class="empty"><span class="ic">○</span>Нет записей перестирки за месяц</div>`;
+  } else {
+    sorted.slice(0,40).forEach(r=>{
+      const pname = state.points.find(p=>p.id===r.pid)?.name||r.pid;
+      const row = document.createElement('div');
+      row.className = 'entry-row';
+      row.innerHTML = `<span class="ed">${fmtDate(r.date)}</span><span class="ek">${pname} · ${r.kg} кг</span><span class="ep">${rub(r.rub)}</span>`;
+      rh.appendChild(row);
+    });
+  }
+}
+
+function renderExpenses(el){
+  const mk = thisMonthKey();
+  const monthExp = state.expenses.filter(e=>monthKey(e.date)===mk);
+  const total = monthExp.reduce((s,e)=>s+(e.amount||0),0);
+  const byCat = {};
+  state.expenseCategories.forEach(c=>byCat[c]=0);
+  monthExp.forEach(e=>byCat[e.category]=(byCat[e.category]||0)+(e.amount||0));
+
+  el.innerHTML = `
+    <div class="stat" style="margin-bottom:14px;"><div class="label">Расходы за месяц</div><div class="val amber">${rub(total)}</div></div>
+    <div class="card">
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="eDate" value="${todayStr()}"></label>
+      <label class="f"><span class="flabel">Категория</span>
+        <select id="eCat">${state.expenseCategories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      </label>
+      <label class="f"><span class="flabel">Сумма, ₽</span><input type="number" id="eAmt" placeholder="0" step="1"></label>
+      <label class="f"><span class="flabel">Заметка</span><input type="text" id="eNote" placeholder="необязательно"></label>
+      <button class="btn btn-primary btn-block" id="eAddBtn">Добавить</button>
+    </div>
+    <div class="section-title">По категориям, месяц</div>
+    <div class="card" id="eCatCard" style="padding:6px 14px;"></div>
+    <div class="section-title">Последние</div>
+    <div class="card" id="eHistory" style="padding:6px 14px;"></div>
+  `;
+  el.querySelector('#eAddBtn').addEventListener('click', ()=>{
+    const date = el.querySelector('#eDate').value || todayStr();
+    const category = el.querySelector('#eCat').value;
+    const amount = parseFloat(el.querySelector('#eAmt').value);
+    const note = el.querySelector('#eNote').value.trim();
+    if(!amount){ showToast('Укажи сумму'); return; }
+    state.expenses.push({date, category, amount, note});
+    saveState(); showToast('Добавлено'); render();
+  });
+
+  const cc = el.querySelector('#eCatCard');
+  let any=false;
+  state.expenseCategories.forEach(c=>{
+    if(byCat[c]>0){ any=true;
+      const row=document.createElement('div'); row.className='entry-row';
+      row.innerHTML=`<span class="ek" style="flex:none;width:auto;">${c}</span><span class="ep" style="flex:1;">${rub(byCat[c])}</span>`;
+      cc.appendChild(row);
+    }
+  });
+  if(!any) cc.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет данных</div>`;
+
+  const eh = el.querySelector('#eHistory');
+  const sorted = monthExp.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!sorted.length){
+    eh.innerHTML = `<div class="empty"><span class="ic">○</span>Нет записей за месяц</div>`;
+  } else {
+    sorted.slice(0,40).forEach(e=>{
+      const realIdx = state.expenses.indexOf(e);
+      const row = document.createElement('div'); row.className='entry-row';
+      row.innerHTML = `<span class="ed">${fmtDate(e.date)}</span><span class="ek">${e.category}${e.note?' · '+e.note:''}</span><span class="ep">${rub(e.amount)}</span><span class="edel" data-idx="${realIdx}">✕</span>`;
+      row.querySelector('.edel').addEventListener('click', ()=>{ state.expenses.splice(realIdx,1); saveState(); render(); });
+      eh.appendChild(row);
+    });
+  }
+}
+
+function renderDriver(el){
+  const sorted = state.driverNotes.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const mk = thisMonthKey();
+  const totalKm = sorted.filter(d=>monthKey(d.date)===mk).reduce((s,d)=>s+(d.km||0),0);
+  el.innerHTML = `
+    <div class="stat" style="margin-bottom:14px;"><div class="label">Км за месяц</div><div class="val steam">${fmt(totalKm)}</div></div>
+    <div class="card">
+      <div class="hint">Раздел в разработке. Пришлёшь список адресов по точкам — добавлю автоматический расчёт км и привязку к каждому ресторану.</div>
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="dDate" value="${todayStr()}"></label>
+      <label class="f"><span class="flabel">Откуда</span><input type="text" id="dFrom" placeholder="адрес отправления"></label>
+      <label class="f"><span class="flabel">Куда</span><input type="text" id="dTo" placeholder="адрес назначения"></label>
+      <label class="f"><span class="flabel">Км</span><input type="number" id="dKm" placeholder="0" step="0.1"></label>
+      <label class="f"><span class="flabel">Заметка</span><input type="text" id="dNote" placeholder="необязательно"></label>
+      <button class="btn btn-primary btn-block" id="dAddBtn">Добавить маршрут</button>
+    </div>
+    <div class="section-title">Маршруты</div>
+    <div class="card" id="dHistory" style="padding:6px 14px;"></div>
+  `;
+  el.querySelector('#dAddBtn').addEventListener('click', ()=>{
+    const date = el.querySelector('#dDate').value || todayStr();
+    const from = el.querySelector('#dFrom').value.trim();
+    const to = el.querySelector('#dTo').value.trim();
+    const km = parseFloat(el.querySelector('#dKm').value);
+    const note = el.querySelector('#dNote').value.trim();
+    if(!from || !to || !km){ showToast('Заполни откуда, куда и км'); return; }
+    state.driverNotes.push({date, from, to, km, note});
+    saveState(); showToast('Маршрут добавлен'); render();
+  });
+  const dh = el.querySelector('#dHistory');
+  if(!sorted.length){
+    dh.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет маршрутов</div>`;
+  } else {
+    sorted.slice(0,40).forEach(d=>{
+      const realIdx = state.driverNotes.indexOf(d);
+      const row = document.createElement('div'); row.className='entry-row';
+      row.innerHTML = `<span class="ed">${fmtDate(d.date)}</span><span class="ek">${d.from} → ${d.to}</span><span class="ep">${fmt(d.km)} км</span><span class="edel" data-idx="${realIdx}">✕</span>`;
+      row.querySelector('.edel').addEventListener('click', ()=>{ state.driverNotes.splice(realIdx,1); saveState(); render(); });
+      dh.appendChild(row);
+    });
+  }
+}
+
+loadState();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
