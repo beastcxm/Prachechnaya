@@ -201,21 +201,29 @@ document.querySelectorAll('.tab').forEach(t=>{
 function pointEntries(id){ return state.entries[id] || []; }
 function pointMonthEntries(id, mk){ return pointEntries(id).filter(e=>monthKey(e.date)===mk); }
 
+function restirkaEntries(id){ return state.restirka[id] || []; }
+function restirkaMonthEntries(id, mk){ return restirkaEntries(id).filter(r=>monthKey(r.date)===mk); }
+
 function pointMonthTotals(id, mk){
   const es = pointMonthEntries(id, mk);
   const p = state.points.find(x=>x.id===id);
-  const kg = fmt(es.reduce((s,e)=>s+(e.kg||0),0));
+  const kgMain = fmt(es.reduce((s,e)=>s+(e.kg||0),0));
   const days = es.length;
-  let rubTotal = 0, subLabel = '';
+  const rEntries = restirkaMonthEntries(id, mk);
+  const kgRestirka = fmt(rEntries.reduce((s,r)=>s+(r.kg||0),0));
+  const rubRestirka = fmt(rEntries.reduce((s,r)=>s+(r.rub||0),0));
+  let rubMain = 0, subLabel = '';
   if(p.pricingType === 'abonement'){
-    const overKg = Math.max(0, kg - p.capKg);
-    rubTotal = p.abonementFee + overKg*p.tariff;
+    const overKg = Math.max(0, kgMain - p.capKg);
+    rubMain = p.abonementFee + overKg*p.tariff;
     subLabel = overKg>0 ? `+${fmt(overKg)} кг сверх` : `до ${p.capKg} кг`;
   } else {
-    rubTotal = kg*p.tariff;
+    rubMain = fmt(kgMain*p.tariff);
     subLabel = p.tariff+'₽/кг';
   }
-  return {kg, rub:rubTotal, days, subLabel};
+  const kgTotal = fmt(kgMain + kgRestirka);
+  const rubTotal = fmt(rubMain + rubRestirka);
+  return {kg:kgTotal, kgMain, kgRestirka, rub:rubTotal, rubMain, rubRestirka, days, subLabel};
 }
 
 function render(){
@@ -260,11 +268,14 @@ function renderDashboard(el){
 function pointCardEl(p, t, i){
   const div = document.createElement('div');
   div.className = 'point-card';
+  const metaStr = t.kgRestirka>0
+    ? `${t.kgMain} + ${t.kgRestirka} (перест.) кг · ${t.days} ${t.days===1?'выезд':'выездов'}`
+    : `${t.kg} кг · ${t.days} ${t.days===1?'выезд':'выездов'}`;
   div.innerHTML = `
     <div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div>
     <div style="flex:1; min-width:0;">
       <div class="pname">${p.name}</div>
-      <div class="pmeta">${t.kg} кг · ${t.days} ${t.days===1?'выезд':'выездов'}</div>
+      <div class="pmeta">${metaStr}</div>
     </div>
     <div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div>
     <div class="chev">›</div>
@@ -293,8 +304,12 @@ function renderPointDetail(el){
   el.innerHTML = `
     <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span></div>
     <div class="grid2">
-      <div class="stat"><div class="label">Месяц, кг</div><div class="val steam">${t.kg}</div></div>
-      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div><div class="sub2">${t.subLabel}</div></div>
+      <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${t.kg}</div>
+        ${t.kgRestirka>0 ? `<div class="sub2">${t.kgMain} стирка + ${t.kgRestirka} перест.</div>` : ''}
+      </div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div>
+        ${t.kgRestirka>0 ? `<div class="sub2">${rub(t.rubMain)} + ${rub(t.rubRestirka)} перест.</div>` : `<div class="sub2">${t.subLabel}</div>`}
+      </div>
     </div>
 
     <div class="card" style="margin-top:14px;">
@@ -383,32 +398,75 @@ function renderPointDetail(el){
   });
 
   const hc = el.querySelector('#historyCard');
-  if(!entries.length){
+  const blocks = {};
+  pointEntries(p.id).forEach(e=>{
+    if(!blocks[e.date]) blocks[e.date] = {date:e.date, mains:[], rests:[]};
+    blocks[e.date].mains.push(e);
+  });
+  restirkaEntries(p.id).forEach(r=>{
+    if(!blocks[r.date]) blocks[r.date] = {date:r.date, mains:[], rests:[]};
+    blocks[r.date].rests.push(r);
+  });
+  const blockList = Object.values(blocks).sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(!blockList.length){
     hc.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет записей по этой точке</div>`;
   } else {
-    entries.slice(0,60).forEach((e)=>{
-      const row = document.createElement('div');
-      row.className = 'entry-row';
-      const realIdx = state.entries[p.id].indexOf(e);
-      const itemsStr = e.items && Object.keys(e.items).length
-        ? Object.entries(e.items).map(([iid,n])=>{
-            const it = p.items.find(x=>x.id===iid);
-            return (it?it.name:iid)+' '+n;
-          }).join(', ')
-        : '';
-      const dayRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : null;
-      row.innerHTML = `
-        <span class="ed">${fmtDate(e.date)}</span>
-        <span class="ek">${e.kg?e.kg+' кг':''}${e.note?' · '+e.note:''}${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
-        <span class="ep">${dayRub!==null ? rub(dayRub) : '—'}</span>
-        <span class="edel" data-idx="${realIdx}">✕</span>
-      `;
-      row.querySelector('.edel').addEventListener('click', (ev)=>{
-        ev.stopPropagation();
-        state.entries[p.id].splice(realIdx,1);
-        saveState(); render();
+    blockList.slice(0,60).forEach(block=>{
+      const wrap = document.createElement('div');
+      wrap.style.borderBottom = '1px solid var(--line-soft)';
+      wrap.style.padding = '10px 0';
+
+      let mainKg = 0, mainRub = 0;
+      block.mains.forEach(e=>{
+        mainKg += e.kg||0;
+        const dayRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : null;
+        if(dayRub!==null) mainRub += dayRub;
+        const itemsStr = e.items && Object.keys(e.items).length
+          ? Object.entries(e.items).map(([iid,n])=>{ const it=p.items.find(x=>x.id===iid); return (it?it.name:iid)+' '+n; }).join(', ')
+          : '';
+        const realIdx = state.entries[p.id].indexOf(e);
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+        row.style.borderBottom = 'none';
+        row.innerHTML = `
+          <span class="ed">${fmtDate(e.date)}</span>
+          <span class="ek">Стирка${e.kg?': '+e.kg+' кг':''}${e.note?' · '+e.note:''}${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
+          <span class="ep">${dayRub!==null ? rub(dayRub) : '—'}</span>
+          <span class="edel" data-mainidx="${realIdx}">✕</span>
+        `;
+        row.querySelector('.edel').addEventListener('click', ()=>{ state.entries[p.id].splice(realIdx,1); saveState(); render(); });
+        wrap.appendChild(row);
       });
-      hc.appendChild(row);
+
+      let restKg = 0, restRub = 0;
+      block.rests.forEach(r=>{
+        restKg += r.kg||0; restRub += r.rub||0;
+        const realIdx = state.restirka[p.id].indexOf(r);
+        const itemsStr = Object.entries(r.qty||{}).map(([iid,n])=>{
+          const it = state.restirkaItems.find(x=>x.id===iid); return (it?it.name:iid)+' '+n;
+        }).join(', ');
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+        row.style.borderBottom = 'none';
+        row.innerHTML = `
+          <span class="ed"></span>
+          <span class="ek" style="color:var(--steam)">Перестирка: ${r.kg} кг${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
+          <span class="ep">${rub(r.rub)}</span>
+          <span class="edel" data-restidx="${realIdx}">✕</span>
+        `;
+        row.querySelector('.edel').addEventListener('click', ()=>{ state.restirka[p.id].splice(realIdx,1); saveState(); render(); });
+        wrap.appendChild(row);
+      });
+
+      if(block.mains.length && block.rests.length){
+        const totalRow = document.createElement('div');
+        totalRow.className = 'entry-row';
+        totalRow.style.borderBottom = 'none';
+        totalRow.innerHTML = `<span class="ed"></span><span class="ek" style="font-weight:600;">Итого за день: ${fmt(mainKg+restKg)} кг</span><span class="ep" style="font-weight:700;">${rub(mainRub+restRub)}</span><span></span>`;
+        wrap.appendChild(totalRow);
+      }
+      hc.appendChild(wrap);
     });
   }
 }
