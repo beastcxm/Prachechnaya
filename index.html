@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Прачечная">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg: #11151a;
@@ -226,6 +227,91 @@ function pointMonthTotals(id, mk){
   return {kg:kgTotal, kgMain, kgRestirka, rub:rubTotal, rubMain, rubRestirka, days, subLabel};
 }
 
+function getPointDayBlocks(pid){
+  const blocks = {};
+  pointEntries(pid).forEach(e=>{
+    if(!blocks[e.date]) blocks[e.date] = {date:e.date, mains:[], rests:[]};
+    blocks[e.date].mains.push(e);
+  });
+  restirkaEntries(pid).forEach(r=>{
+    if(!blocks[r.date]) blocks[r.date] = {date:r.date, mains:[], rests:[]};
+    blocks[r.date].rests.push(r);
+  });
+  return Object.values(blocks).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function buildPointSheetData(p){
+  const blocks = getPointDayBlocks(p.id);
+  const headers = ['Дата', 'Вес стирка, кг', ...p.items.map(it=>it.name), 'Заметка', 'Перестирка, кг', ...state.restirkaItems.map(it=>'Перест.: '+it.name), 'Сумма стирка, ₽', 'Сумма перестирка, ₽', 'Итого, ₽'];
+  const rows = [
+    ['Точка', p.name],
+    [p.pricingType==='abonement' ? 'Абонемент' : 'Тариф', p.pricingType==='abonement' ? p.abonementFee+' ₽/мес до '+p.capKg+' кг, далее '+p.tariff+' ₽/кг' : p.tariff+' ₽/кг'],
+    [],
+    headers,
+  ];
+  let sumKg=0, sumRestKg=0, sumMainRub=0, sumRestRub=0;
+  blocks.forEach(b=>{
+    let mainKg=0, note='', itemTotals={};
+    p.items.forEach(it=>itemTotals[it.id]=0);
+    b.mains.forEach(e=>{
+      mainKg += e.kg||0;
+      if(e.note) note = note ? note+'; '+e.note : e.note;
+      Object.entries(e.items||{}).forEach(([iid,n])=>{ itemTotals[iid]=(itemTotals[iid]||0)+n; });
+    });
+    let restKg=0, restItemTotals={};
+    state.restirkaItems.forEach(it=>restItemTotals[it.id]=0);
+    let restRub=0;
+    b.rests.forEach(r=>{
+      restKg += r.kg||0; restRub += r.rub||0;
+      Object.entries(r.qty||{}).forEach(([iid,n])=>{ restItemTotals[iid]=(restItemTotals[iid]||0)+n; });
+    });
+    const mainRub = p.pricingType==='perkg' ? fmt(mainKg*p.tariff) : '';
+    sumKg += mainKg; sumRestKg += restKg;
+    sumMainRub += (typeof mainRub==='number'?mainRub:0); sumRestRub += restRub;
+    const row = [
+      fmtDate(b.date)+'.'+b.date.slice(0,4),
+      mainKg||'',
+      ...p.items.map(it=>itemTotals[it.id]||''),
+      note,
+      restKg||'',
+      ...state.restirkaItems.map(it=>restItemTotals[it.id]||''),
+      mainRub===''?'':mainRub,
+      restRub||'',
+      fmt((typeof mainRub==='number'?mainRub:0)+restRub),
+    ];
+    rows.push(row);
+  });
+  rows.push([]);
+  const abonementRub = p.pricingType==='abonement' ? p.abonementFee + Math.max(0,sumKg-p.capKg)*p.tariff : sumMainRub;
+  rows.push(['Итого', fmt(sumKg), ...p.items.map(()=>''), '', fmt(sumRestKg), ...state.restirkaItems.map(()=>''), fmt(abonementRub), fmt(sumRestRub), fmt(abonementRub+sumRestRub)]);
+  return rows;
+}
+
+function exportPointExcel(pid){
+  if(typeof XLSX === 'undefined'){ showToast('Нет подключения к интернету для экспорта'); return; }
+  const p = state.points.find(x=>x.id===pid);
+  const rows = buildPointSheetData(p);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = rows[3].map((h,i)=> i===0 ? {wch:12} : {wch: Math.max(10, String(h).length+2)});
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, p.name.slice(0,31));
+  XLSX.writeFile(wb, `${p.name.replace(/\s+/g,'_')}_${todayStr()}.xlsx`);
+  showToast('Файл сохранён');
+}
+
+function exportAllExcel(){
+  if(typeof XLSX === 'undefined'){ showToast('Нет подключения к интернету для экспорта'); return; }
+  const wb = XLSX.utils.book_new();
+  state.points.forEach(p=>{
+    const rows = buildPointSheetData(p);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = rows[3].map((h,i)=> i===0 ? {wch:12} : {wch: Math.max(10, String(h).length+2)});
+    XLSX.utils.book_append_sheet(wb, ws, p.name.slice(0,31));
+  });
+  XLSX.writeFile(wb, `Прачечная_все_точки_${todayStr()}.xlsx`);
+  showToast('Файл сохранён');
+}
+
 function render(){
   const titles = {dashboard:'Дашборд', points:'Точки', restirka:'Перестирка', expenses:'Расходы', driver:'Водитель'};
   document.getElementById('topTitle').textContent = view.pointId ? (state.points.find(p=>p.id===view.pointId)?.name||'') : titles[view.tab];
@@ -290,6 +376,11 @@ function pointCardEl(p, t, i){
 
 function renderPoints(el){
   const mk = thisMonthKey();
+  const topRow = document.createElement('div');
+  topRow.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:10px;';
+  topRow.innerHTML = `<button class="btn btn-sm" id="exportAllBtn">⬇ Excel · все точки</button>`;
+  el.appendChild(topRow);
+  topRow.querySelector('#exportAllBtn').addEventListener('click', exportAllExcel);
   const wrap = document.createElement('div');
   state.points.forEach((p,i)=>wrap.appendChild(pointCardEl(p, pointMonthTotals(p.id, mk), i)));
   el.appendChild(wrap);
@@ -302,7 +393,7 @@ function renderPointDetail(el){
   const t = pointMonthTotals(p.id, mk);
 
   el.innerHTML = `
-    <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span></div>
+    <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span><span style="flex:1;"></span><button class="btn btn-sm" id="exportBtn">⬇ Excel</button></div>
     <div class="grid2">
       <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${t.kg}</div>
         ${t.kgRestirka>0 ? `<div class="sub2">${t.kgMain} стирка + ${t.kgRestirka} перест.</div>` : ''}
@@ -338,6 +429,7 @@ function renderPointDetail(el){
   `;
 
   el.querySelector('#backBtn').addEventListener('click', ()=>{ view.pointId=null; render(); });
+  el.querySelector('#exportBtn').addEventListener('click', ()=>exportPointExcel(p.id));
 
   function renderPricingFields(){
     const pf = el.querySelector('#pricingFields');
@@ -640,6 +732,152 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
   });
+}
+
+// ─── Excel Export ────────────────────────────────────────────────
+
+function buildPointSheetData(p){
+  // Collect all months that have data
+  const allEntries = pointEntries(p.id);
+  const allRestirka = restirkaEntries(p.id);
+  const allDates = [...new Set([...allEntries.map(e=>e.date), ...allRestirka.map(r=>r.date)])].sort();
+  if(!allDates.length) return null;
+
+  const months = [...new Set(allDates.map(d=>monthKey(d)))].sort();
+  const wb = XLSX.utils.book_new();
+
+  months.forEach(mk=>{
+    const [yr, mo] = mk.split('-');
+    const monthNames = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const sheetName = monthNames[parseInt(mo)] || mk;
+
+    const mEntries = allEntries.filter(e=>monthKey(e.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
+    const mRest = allRestirka.filter(r=>monthKey(r.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
+
+    // Header rows
+    const rows = [];
+    rows.push([p.name + ' — ' + sheetName + ' ' + yr]);
+    rows.push([]);
+
+    // Pricing info
+    if(p.pricingType==='abonement'){
+      rows.push(['Абонемент:', p.abonementFee + ' ₽/мес', 'Лимит:', p.capKg + ' кг', 'Сверх:', p.tariff + ' ₽/кг']);
+    } else {
+      rows.push(['Тариф:', p.tariff + ' ₽/кг']);
+    }
+    rows.push([]);
+
+    // ОСНОВНАЯ СТИРКА
+    rows.push(['ОСНОВНАЯ СТИРКА']);
+    // Build item columns
+    const itemNames = p.items.map(it=>it.name);
+    rows.push(['Дата', 'Кг', ...itemNames, 'Заметка', 'Сумма, ₽']);
+
+    let totalKgMain = 0, totalRubMain = 0;
+    mEntries.forEach(e=>{
+      const entryRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : '';
+      const itemCols = p.items.map(it=>(e.items&&e.items[it.id])||'');
+      rows.push([e.date, e.kg||'', ...itemCols, e.note||'', entryRub]);
+      totalKgMain += e.kg||0;
+      if(p.pricingType==='perkg') totalRubMain += (e.kg||0)*p.tariff;
+    });
+    if(p.pricingType==='abonement'){
+      const overKg = Math.max(0, totalKgMain - p.capKg);
+      totalRubMain = p.abonementFee + overKg*p.tariff;
+    }
+    rows.push(['ИТОГО стирка', fmt(totalKgMain), ...p.items.map(()=>''), '', Math.round(totalRubMain)]);
+    rows.push([]);
+
+    // ПЕРЕСТИРКА
+    if(mRest.length){
+      rows.push(['ПЕРЕСТИРКА (тариф ' + state.restirkaTariff + ' ₽/кг)']);
+      const rItemNames = state.restirkaItems.map(it=>it.name+' ('+it.weight+'г)');
+      rows.push(['Дата', 'Кг', ...rItemNames, 'Сумма, ₽']);
+      let totalKgRest=0, totalRubRest=0;
+      mRest.forEach(r=>{
+        const qCols = state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||'');
+        rows.push([r.date, r.kg, ...qCols, r.rub]);
+        totalKgRest += r.kg||0;
+        totalRubRest += r.rub||0;
+      });
+      rows.push(['ИТОГО перестирка', fmt(totalKgRest), ...state.restirkaItems.map(()=>''), Math.round(totalRubRest)]);
+      rows.push([]);
+      rows.push(['ИТОГО ЗА МЕСЯЦ', fmt(totalKgMain+totalKgRest), ...([...p.items,...state.restirkaItems]).map(()=>''), Math.round(totalRubMain+totalRubRest)]);
+    } else {
+      rows.push(['ИТОГО ЗА МЕСЯЦ', fmt(totalKgMain), ...p.items.map(()=>''), '', Math.round(totalRubMain)]);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    // Column widths
+    ws['!cols'] = [{wch:12},{wch:8},...p.items.map(()=>({wch:10})),{wch:20},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  return wb;
+}
+
+function exportPointExcel(pid){
+  const p = state.points.find(x=>x.id===pid);
+  showToast('Формирую Excel...');
+  setTimeout(()=>{
+    const wb = buildPointSheetData(p);
+    if(!wb){ showToast('Нет данных для экспорта'); return; }
+    const fname = p.name.replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,7) + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('Готово: ' + fname);
+  }, 50);
+}
+
+function exportAllExcel(){
+  showToast('Формирую сводный Excel...');
+  setTimeout(()=>{
+    const wb = XLSX.utils.book_new();
+    const mk = thisMonthKey();
+    const [yr, mo] = mk.split('-');
+    const monthNames = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+    // Summary sheet
+    const summaryRows = [
+      ['СВОДНЫЙ ОТЧЁТ — ' + monthNames[parseInt(mo)] + ' ' + yr],
+      [],
+      ['Точка','Кг (стирка)','Кг (перест.)','Кг итого','Сумма стирка','Сумма перест.','Итого, ₽'],
+    ];
+    let gKg=0, gRub=0;
+    state.points.forEach(p=>{
+      const t = pointMonthTotals(p.id, mk);
+      summaryRows.push([p.name, t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub)]);
+      gKg += t.kg; gRub += t.rub;
+    });
+    summaryRows.push(['ИТОГО', '', '', fmt(gKg), '', '', Math.round(gRub)]);
+    summaryRows.push([]);
+
+    // Expenses
+    const monthExp = state.expenses.filter(e=>monthKey(e.date)===mk);
+    if(monthExp.length){
+      summaryRows.push(['РАСХОДЫ ПРАЧЕЧНОЙ']);
+      summaryRows.push(['Дата','Категория','Сумма, ₽','Заметка']);
+      monthExp.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>summaryRows.push([e.date, e.category, e.amount, e.note||'']));
+      summaryRows.push(['ИТОГО расходы','', monthExp.reduce((s,e)=>s+e.amount,0)]);
+    }
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{wch:16},{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Сводка');
+
+    // One sheet per point
+    state.points.forEach(p=>{
+      const ptWb = buildPointSheetData(p);
+      if(!ptWb) return;
+      ptWb.SheetNames.forEach(sn=>{
+        const label = (p.name.slice(0,12) + ' ' + sn).slice(0,31);
+        XLSX.utils.book_append_sheet(wb, ptWb.Sheets[sn], label);
+      });
+    });
+
+    const fname = 'Прачечная_' + mk + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('Готово: ' + fname);
+  }, 50);
 }
 </script>
 </body>
