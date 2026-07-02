@@ -14,1337 +14,838 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg: #11151a;
-    --panel: #171c23;
-    --panel-2: #1d242c;
-    --line: #2a323c;
-    --line-soft: #232a32;
-    --text: #eef1f4;
-    --text-dim: #9aa6b2;
-    --text-faint: #5e6b78;
-    --steam: #5fb8c9;
-    --steam-dim: #2b4a52;
-    --amber: #e3a64f;
-    --amber-dim: #4a3a22;
-    --green: #6fbf78;
-    --red: #d9645f;
-    --radius: 14px;
-    --radius-sm: 9px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --bg:#11151a;--panel:#171c23;--panel-2:#1d242c;--line:#2a323c;--line-soft:#232a32;
+    --text:#eef1f4;--text-dim:#9aa6b2;--text-faint:#5e6b78;
+    --steam:#5fb8c9;--steam-dim:#2b4a52;--amber:#e3a64f;--amber-dim:#4a3a22;
+    --green:#6fbf78;--red:#d9645f;--radius:14px;--radius-sm:9px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-  body{ margin:0; background:var(--bg); color:var(--text); min-height:100vh; padding-bottom:84px; }
-  .topbar{
-    position:sticky; top:0; z-index:20;
-    background:rgba(17,21,26,0.92); backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--line-soft); padding:16px 18px 14px;
-    display:flex; align-items:baseline; justify-content:space-between;
-  }
-  .topbar .mark{ font-size:11px; letter-spacing:.16em; color:var(--steam); font-weight:700; text-transform:uppercase;}
-  .topbar h1{ font-size:19px; margin:2px 0 0; font-weight:700; letter-spacing:-0.01em;}
-  .topbar .sub{ font-size:11px; color:var(--text-faint); }
-  .view{ padding:16px; max-width:520px; margin:0 auto; }
-  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .stat{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:13px 14px; }
-  .stat .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-faint); margin-bottom:6px;}
-  .stat .val{ font-size:21px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .stat .val.steam{ color:var(--steam); }
-  .stat .val.amber{ color:var(--amber); }
-  .stat .sub2{ font-size:10.5px; color:var(--text-faint); margin-top:4px; }
-  .section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--text-faint); margin:22px 2px 10px; display:flex; justify-content:space-between; align-items:center; }
-  .section-title .more{ color:var(--steam); text-transform:none; letter-spacing:0; font-size:12px; cursor:pointer;}
-  .point-card{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:13px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; cursor:pointer; }
-  .point-card:active{ border-color:var(--steam-dim); }
-  .point-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .point-card .pname{ font-size:15px; font-weight:600; flex:1; min-width:0;}
-  .point-card .pmeta{ font-size:11.5px; color:var(--text-faint); margin-top:2px;}
-  .point-card .pmoney{ text-align:right; }
-  .point-card .pmoney .amt{ font-size:15px; font-weight:700; color:var(--amber); font-variant-numeric:tabular-nums;}
-  .point-card .pmoney .amt-sub{ font-size:10.5px; color:var(--text-faint); }
-  .chev{ color:var(--text-faint); font-size:18px; }
-  .btn{ border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:var(--radius-sm); padding:11px 14px; font-size:14px; font-weight:600; cursor:pointer; text-align:center; }
-  .btn:active{ transform:scale(0.98); }
-  .btn-primary{ background:var(--steam); color:#0b1f23; border-color:var(--steam); }
-  .btn-ghost{ background:transparent; color:var(--text-dim); border:1px solid var(--line-soft); font-weight:500;}
-  .btn-block{ width:100%; }
-  .btn-sm{ padding:7px 11px; font-size:12.5px; }
-  label.f{ display:block; margin-bottom:12px; }
-  label.f .flabel{ font-size:11.5px; color:var(--text-faint); margin-bottom:5px; display:block; }
-  input, select, textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; font-family:inherit; }
-  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--steam); }
-  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-  .back-btn{ font-size:13px; color:var(--steam); cursor:pointer; font-weight:600; }
-  .entry-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px; gap:8px; }
-  .entry-row:last-child{ border-bottom:none; }
-  .entry-row .ed{ color:var(--text-dim); width:56px; flex-shrink:0; }
-  .entry-row .ek{ color:var(--text); flex:1; min-width:0; }
-  .entry-row .eitems{ font-size:11px; color:var(--text-faint); margin-top:2px; }
-  .entry-row .ep{ color:var(--amber); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
-  .entry-row .edel{ color:var(--text-faint); margin-left:4px; cursor:pointer; font-size:16px; }
-  .card{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin-bottom:14px;}
-  .tabbar{ position:fixed; bottom:0; left:0; right:0; z-index:30; background:rgba(17,21,26,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line-soft); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
-  .tab{ flex:1; text-align:center; padding:6px 1px; cursor:pointer; color:var(--text-faint); font-size:9.5px; font-weight:600; letter-spacing:.01em; }
-  .tab .ic{ font-size:19px; display:block; margin-bottom:3px; }
-  .tab.active{ color:var(--steam); }
-  .empty{ text-align:center; padding:36px 10px; color:var(--text-faint); font-size:13.5px; }
-  .empty .ic{ font-size:28px; display:block; margin-bottom:10px; opacity:.6;}
-  .toast{ position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:9px 16px; border-radius:20px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; }
-  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-  .item-grid{ display:grid; grid-template-columns:1fr 64px; gap:8px; align-items:center; margin-bottom:7px;}
-  .item-grid .iname{ font-size:13px; color:var(--text-dim); }
-  .seg{ display:flex; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; margin-bottom:12px;}
-  .seg div{ flex:1; text-align:center; padding:9px 4px; font-size:12.5px; font-weight:600; color:var(--text-dim); cursor:pointer; }
-  .seg div.active{ background:var(--steam-dim); color:var(--steam); }
-  .addrow{ display:flex; gap:8px; margin-top:4px; }
-  .addrow input{ flex:1; }
-  .hint{ font-size:11.5px; color:var(--text-faint); line-height:1.5; margin-bottom:10px;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:84px;}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(17,21,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line-soft);padding:16px 18px 14px;display:flex;align-items:center;justify-content:space-between;}
+  .topbar-left .mark{font-size:11px;letter-spacing:.16em;color:var(--steam);font-weight:700;text-transform:uppercase;}
+  .topbar-left h1{font-size:19px;margin:2px 0 0;font-weight:700;letter-spacing:-.01em;}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .sub{font-size:11px;color:var(--text-faint);}
+  .view{padding:16px;max-width:520px;margin:0 auto;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:13px 14px;}
+  .stat .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin-bottom:6px;}
+  .stat .val{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat .val.steam{color:var(--steam);}.stat .val.amber{color:var(--amber);}
+  .stat .sub2{font-size:10.5px;color:var(--text-faint);margin-top:4px;}
+  .section-title{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-faint);margin:22px 2px 10px;display:flex;justify-content:space-between;align-items:center;}
+  .section-title .more{color:var(--steam);text-transform:none;letter-spacing:0;font-size:12px;cursor:pointer;}
+  .point-card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .point-card:active{border-color:var(--steam-dim);}
+  .point-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .point-card .pname{font-size:15px;font-weight:600;flex:1;min-width:0;}
+  .point-card .pmeta{font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+  .point-card .pmoney{text-align:right;}
+  .point-card .pmoney .amt{font-size:15px;font-weight:700;color:var(--amber);font-variant-numeric:tabular-nums;}
+  .point-card .pmoney .amt-sub{font-size:10.5px;color:var(--text-faint);}
+  .chev{color:var(--text-faint);font-size:18px;}
+  .btn{border:1px solid var(--line);background:var(--panel-2);color:var(--text);border-radius:var(--radius-sm);padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;text-align:center;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--steam);color:#0b1f23;border-color:var(--steam);}
+  .btn-block{width:100%;}.btn-sm{padding:7px 11px;font-size:12.5px;}
+  label.f{display:block;margin-bottom:12px;}
+  label.f .flabel{font-size:11.5px;color:var(--text-faint);margin-bottom:5px;display:block;}
+  input,select,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;font-family:inherit;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--steam);}
+  .back-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .back-btn{font-size:13px;color:var(--steam);cursor:pointer;font-weight:600;}
+  .entry-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px;gap:8px;}
+  .entry-row:last-child{border-bottom:none;}
+  .entry-row .ed{color:var(--text-dim);width:56px;flex-shrink:0;}
+  .entry-row .ek{color:var(--text);flex:1;min-width:0;}
+  .entry-row .eitems{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .entry-row .ep{color:var(--amber);font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+  .entry-row .edel{color:var(--text-faint);margin-left:4px;cursor:pointer;font-size:16px;}
+  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+  .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(17,21,26,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line-soft);display:flex;padding:8px 4px calc(8px + env(safe-area-inset-bottom));}
+  .tab{flex:1;text-align:center;padding:6px 1px;cursor:pointer;color:var(--text-faint);font-size:9.5px;font-weight:600;}
+  .tab .ic{font-size:19px;display:block;margin-bottom:3px;}
+  .tab.active{color:var(--steam);}
+  .empty{text-align:center;padding:36px 10px;color:var(--text-faint);font-size:13.5px;}
+  .empty .ic{font-size:28px;display:block;margin-bottom:10px;opacity:.6;}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:9px 16px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .item-grid{display:grid;grid-template-columns:1fr 64px;gap:8px;align-items:center;margin-bottom:7px;}
+  .item-grid .iname{font-size:13px;color:var(--text-dim);}
+  .seg{display:flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:12px;}
+  .seg div{flex:1;text-align:center;padding:9px 4px;font-size:12.5px;font-weight:600;color:var(--text-dim);cursor:pointer;}
+  .seg div.active{background:var(--steam-dim);color:var(--steam);}
+  .addrow{display:flex;gap:8px;margin-top:4px;}
+  .addrow input{flex:1;}
+  .hint{font-size:11.5px;color:var(--text-faint);line-height:1.5;margin-bottom:10px;}
+  /* Auth overlay */
+  #authOverlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:28px;}
+  #authOverlay .auth-box{width:100%;max-width:320px;}
+  #authOverlay .auth-logo{font-size:36px;text-align:center;margin-bottom:8px;}
+  #authOverlay .auth-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;}
+  #authOverlay .auth-sub{font-size:13px;color:var(--text-faint);text-align:center;margin-bottom:28px;}
+  #authError{color:var(--red);font-size:13px;min-height:18px;margin-bottom:10px;text-align:center;}
+  .view-only-btn{margin-top:16px;text-align:center;font-size:13px;color:var(--steam);cursor:pointer;}
+  /* Loading */
+  #loadingScreen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+  #loadingScreen .spin{width:36px;height:36px;border:3px solid var(--steam-dim);border-top-color:var(--steam);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loadingScreen .load-txt{font-size:13px;color:var(--text-faint);}
 </style>
 </head>
 <body>
+
+<!-- Loading screen -->
+<div id="loadingScreen">
+  <div class="spin"></div>
+  <div class="load-txt">Загрузка данных...</div>
+</div>
+
+<!-- Auth overlay -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">🧺</div>
+    <div class="auth-title">Прачечная</div>
+    <div class="auth-sub">Войди как администратор или просматривай без входа</div>
+    <label class="f"><span class="flabel">Email</span><input type="email" id="authEmail" placeholder="admin@example.com" autocomplete="email"></label>
+    <label class="f"><span class="flabel">Пароль</span><input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password"></label>
+    <div id="authError"></div>
+    <button class="btn btn-primary btn-block" id="authLoginBtn">Войти как администратор</button>
+    <div class="view-only-btn" id="authViewOnlyBtn">Продолжить без входа →</div>
+  </div>
+</div>
+
+<!-- Main app -->
 <div class="topbar">
-  <div>
+  <div class="topbar-left">
     <div class="mark">Учёт стирки</div>
     <h1 id="topTitle">Дашборд</h1>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div class="topbar-right">
     <div class="sub" id="todayDate"></div>
-    <div id="lockBtn" style="cursor:pointer;font-size:18px;color:var(--text-faint);display:none;" title="Войти как администратор">🔒</div>
-    <div id="unlockBtn" style="cursor:pointer;font-size:13px;color:var(--steam);font-weight:600;display:none;">Выйти</div>
+    <div id="adminBadge" style="display:none;font-size:11px;color:var(--steam);font-weight:700;border:1px solid var(--steam-dim);padding:3px 8px;border-radius:20px;">Админ</div>
+    <div id="loginBtn" style="display:none;font-size:12px;color:var(--text-faint);cursor:pointer;">🔒 Войти</div>
+    <div id="logoutBtn" style="display:none;font-size:12px;color:var(--text-faint);cursor:pointer;">Выйти</div>
   </div>
 </div>
 
-<!-- PIN overlay -->
-<div id="pinOverlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
-  <div style="font-size:28px;margin-bottom:8px;">🔒</div>
-  <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Режим просмотра</div>
-  <div style="font-size:13px;color:var(--text-faint);margin-bottom:28px;text-align:center;">Для редактирования введи PIN администратора</div>
-  <input type="password" id="pinInput" placeholder="PIN-код" inputmode="numeric" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:6px;margin-bottom:12px;">
-  <div id="pinError" style="color:var(--red);font-size:13px;min-height:20px;margin-bottom:10px;"></div>
-  <button class="btn btn-primary" style="max-width:200px;width:100%;" id="pinEnterBtn">Войти</button>
-  <div style="margin-top:16px;">
-    <span style="font-size:13px;color:var(--steam);cursor:pointer;" id="pinViewOnlyBtn">Продолжить без входа →</span>
-  </div>
-</div>
 <div class="view" id="view"></div>
 <div class="toast" id="toast"></div>
+
 <div class="tabbar">
-  <div class="tab active" data-tab="dashboard"><span class="ic">&#9679;</span>Дашборд</div>
-  <div class="tab" data-tab="points"><span class="ic">&#9632;</span>Точки</div>
-  <div class="tab" data-tab="restirka"><span class="ic">&#9851;</span>Перестирка</div>
-  <div class="tab" data-tab="expenses"><span class="ic">&#8372;</span>Расходы</div>
-  <div class="tab" data-tab="driver"><span class="ic">&#9658;</span>Водитель</div>
-  <div class="tab" data-tab="settings"><span class="ic">&#9881;</span>Настройки</div>
+  <div class="tab active" data-tab="dashboard"><span class="ic">◉</span>Дашборд</div>
+  <div class="tab" data-tab="points"><span class="ic">◼</span>Точки</div>
+  <div class="tab" data-tab="restirka"><span class="ic">♻</span>Перестирка</div>
+  <div class="tab" data-tab="expenses"><span class="ic">₽</span>Расходы</div>
+  <div class="tab" data-tab="driver"><span class="ic">►</span>Водитель</div>
+  <div class="tab" id="settingsTab" data-tab="settings"><span class="ic">⚙</span>Настройки</div>
 </div>
 
-<script>
-const STORAGE_KEY = 'laundry-app-state-v2';
+<script type="module">
+// ─── Firebase ────────────────────────────────────────────────────
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, doc, setDoc, addDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA1lNWYXkZoLu9o86O6XfmRgETCqAHQZsg",
+  authDomain: "prachechnaya-49a0f.firebaseapp.com",
+  projectId: "prachechnaya-49a0f",
+  storageBucket: "prachechnaya-49a0f.firebasestorage.app",
+  messagingSenderId: "222611877643",
+  appId: "1:222611877643:web:a7610fff35b327243afc0e"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const auth = getAuth(app);
+
+// ─── Constants ───────────────────────────────────────────────────
 const DOT_COLORS = ['#5fb8c9','#e3a64f','#d9645f','#6fbf78','#8a7fd6','#d68fc0','#7ea6d9','#c9a45f'];
+const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const DAY_NAMES   = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 
-const ITEMS_RESTORAN = ['Ошибори','Салфетка','Микрофибра','Фартук','Сидушка','Чехол на кресло','Униформа','Брюки','Куртка повара','Плед','Скатерть','Толстовка','Футболка','Шторы','Коврик'];
-const ITEMS_BRUNO = ['Салфетка белая','Салфетка коричн.','Скатерть белая','Скатерть коричн.','Ошибори','Натирка синяя','Микра черная','Микра красная','Микра синяя','Микра зеленая','Китель повара','Брюки повара','Фартук','Перчатки','Нагрудник','Рубашка','Чехол на резинке','Платье','Брюки клас./джинсы','Штора','Кофта/джемпер','Подушка/сидушка','Плед','Ковер','Пиджак','Мультон'];
-const ITEMS_TEREMOK = ['Бережковский халаты','Зубовский комплект','Зубовский туника','Зубовский колпак','Зубовский фартук','Зубовский футболка'];
-const ITEMS_PADEL = ['Полотенце'];
-const ITEMS_TD = ['Салфетка','Скатерть','Полотенце'];
+const PRICES_REST = {'Плед':120,'Куртка повара':220,'Брюки повара':175,'Фартук':90,'Чехол на кресло':60,'Сидушка':60,'Шторы':200,'Коврик':150,'Толстовка':80,'Футболка':60};
+function mkItems(names, prices={}){ return names.map(n=>({id:n.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_'), name:n, pricePerUnit:prices[n]||0})); }
 
-function mkItems(names, prices={}){ return names.map(n=>({id: n.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_'), name:n, pricePerUnit: prices[n]||0})); }
-
-// штучные тарифы Моро/Брон/Эмбер/Сарай
-const PRICES_RESTORAN = {'Плед':120,'Куртка повара':220,'Брюки повара':175,'Фартук':90,'Декор.нав.':60,'Чехол на кресло':60,'Сидушка':60,'Шторы':200,'Коврик':150,'Толстовка':80,'Футболка':60};
-
-const DEFAULT_STATE = {
-  points: [
-    {id:'saray',   name:'Сарай 1',      address:'', pricingType:'abonement', tariff:100, abonementFee:85000, capKg:800, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
-    {id:'moro',    name:'Моро',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
-    {id:'bron',    name:'Брон',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
-    {id:'bruno',   name:'Бруно',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_BRUNO)},
-    {id:'amber',   name:'Эмбер',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
-    {id:'padel',   name:'Падел',        address:'', pricingType:'perkg',     tariff:80,  abonementFee:0, capKg:0, items:mkItems(ITEMS_PADEL)},
-    {id:'teremok', name:'Теремок',      address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_TEREMOK)},
-    {id:'td',      name:'Торговый дом', address:'', pricingType:'perkg',     tariff:150, abonementFee:0, capKg:0, items:mkItems(ITEMS_TD)},
-  ],
-  entries: {},
-  restirkaItems: [
-    {id:'salfetka', name:'Салфетка', weight:50},
-    {id:'oshibori',  name:'Ошибори', weight:50},
-    {id:'skatert',   name:'Скатерть', weight:280},
-  ],
-  restirka: {},
-  restirkaTariff: 100,
-  expenses: [],
-  expenseCategories: ['Порошок цветной','Порошок белый','Белизна','Пакеты','Прочее'],
-  driverNotes: [],
-  adminPin: '',       // empty = no pin set (open edit), non-empty = pin required
+const DEFAULT_POINTS = [
+  {id:'saray',   name:'Сарай 1',      address:'', pricingType:'abonement', tariff:100, abonementFee:85000, capKg:800, items:mkItems(['Ошибори','Салфетка','Микрофибра','Фартук','Сидушка','Чехол на кресло','Брюки','Куртка повара','Плед','Скатерть','Шторы','Коврик'],PRICES_REST)},
+  {id:'moro',    name:'Моро',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0,     capKg:0,   items:mkItems(['Ошибори','Салфетка','Микрофибра','Фартук','Сидушка','Чехол на кресло','Брюки','Куртка повара','Плед','Скатерть','Шторы','Коврик'],PRICES_REST)},
+  {id:'bron',    name:'Брон',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0,     capKg:0,   items:mkItems(['Ошибори','Салфетка','Микрофибра','Фартук','Сидушка','Чехол на кресло','Брюки','Куртка повара','Плед','Скатерть','Шторы','Коврик'],PRICES_REST)},
+  {id:'bruno',   name:'Бруно',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0,     capKg:0,   items:mkItems(['Салфетка белая','Салфетка коричн.','Скатерть белая','Скатерть коричн.','Ошибори','Натирка синяя','Микра черная','Микра красная','Микра синяя','Микра зеленая','Китель повара','Брюки повара','Фартук','Нагрудник','Рубашка','Чехол на резинке','Платье','Штора','Кофта/джемпер','Подушка/сидушка','Плед','Пиджак'])},
+  {id:'amber',   name:'Эмбер',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0,     capKg:0,   items:mkItems(['Ошибори','Салфетка','Микрофибра','Фартук','Плед','Скатерть'],PRICES_REST)},
+  {id:'padel',   name:'Падел',        address:'', pricingType:'perkg',     tariff:80,  abonementFee:0,     capKg:0,   items:mkItems(['Полотенце'])},
+  {id:'teremok', name:'Теремок',      address:'', pricingType:'perkg',     tariff:100, abonementFee:0,     capKg:0,   items:mkItems(['Бережковский халаты','Зубовский комплект','Зубовский туника','Зубовский колпак','Зубовский фартук','Зубовский футболка'])},
+  {id:'td',      name:'Торговый дом', address:'', pricingType:'perkg',     tariff:150, abonementFee:0,     capKg:0,   items:mkItems(['Салфетка','Скатерть','Полотенце'])},
+];
+const DEFAULT_SETTINGS = {
+  restirkaItems:[{id:'salfetka',name:'Салфетка',weight:50},{id:'oshibori',name:'Ошибори',weight:50},{id:'skatert',name:'Скатерть',weight:280}],
+  restirkaTariff:100,
+  expenseCategories:['Порошок цветной','Порошок белый','Белизна','Пакеты','Прочее'],
 };
 
-let state = null;
-let view = {tab:'dashboard', pointId:null};
-let isAdmin = false; // session only – reset on reload
+// ─── State ───────────────────────────────────────────────────────
+let state = {
+  points: [],
+  entries: {},     // pointId → [{id, date, kg, items, note}]
+  restirka: {},    // pointId → [{id, date, qty, kg, rub}]
+  expenses: [],    // [{id, date, category, amount, note}]
+  driverNotes: [], // [{id, date, from, to, km, note}]
+  restirkaItems: DEFAULT_SETTINGS.restirkaItems,
+  restirkaTariff: DEFAULT_SETTINGS.restirkaTariff,
+  expenseCategories: DEFAULT_SETTINGS.expenseCategories,
+};
+let isAdmin = false;
+let currentView = {tab:'dashboard', pointId:null, settingPointId:null};
 
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    state = raw ? JSON.parse(raw) : structuredClone(DEFAULT_STATE);
-  }catch(e){
-    state = structuredClone(DEFAULT_STATE);
-  }
-  for(const k in DEFAULT_STATE){ if(!(k in state)) state[k] = structuredClone(DEFAULT_STATE[k]); }
-  state.points.forEach(p=>{
-    if(!p.items) p.items=[];
-    if(p.pricingType===undefined) p.pricingType='perkg';
-    if(p.abonementFee===undefined) p.abonementFee=0;
-    if(p.capKg===undefined) p.capKg=0;
-    if(p.address===undefined) p.address='';
-    p.items.forEach(it=>{ if(it.pricePerUnit===undefined) it.pricePerUnit=0; });
-  });
-  // If no PIN set — treat everyone as admin (open mode)
-  if(!state.adminPin) isAdmin = true;
-  if(!isAdmin) showPinOverlay();
-  else render();
-}
-
-function saveState(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch(e){ showToast('Не удалось сохранить: ' + e.message); }
-}
+// ─── Helpers ─────────────────────────────────────────────────────
+function fmt(n){ return Math.round((n||0)*100)/100; }
+function rub(n){ return Math.round(n||0).toLocaleString('ru-RU')+' ₽'; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function monthKey(d){ return d.slice(0,7); }
+function thisMonth(){ return todayStr().slice(0,7); }
+function fmtDate(d){ const [y,m,day]=d.split('-'); return day+'.'+m; }
+function daysInMonth(yr,mo){ return new Date(yr,mo,0).getDate(); }
+function dayOfWeek(dateStr){ return DAY_NAMES[new Date(dateStr).getDay()]; }
 
 function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 1800);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
 }
+function showLoading(){ document.getElementById('loadingScreen').style.display='flex'; }
+function hideLoading(){ document.getElementById('loadingScreen').style.display='none'; }
 
-function fmt(n){ return Math.round((n||0)*100)/100; }
-function rub(n){ return Math.round(n||0).toLocaleString('ru-RU') + ' ₽'; }
-function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
-function monthKey(dateStr){ return dateStr.slice(0,7); }
-function thisMonthKey(){ return todayStr().slice(0,7); }
-function fmtDate(d){ const [y,m,day]=d.split('-'); return day+'.'+m; }
+// ─── Firebase Data Layer ──────────────────────────────────────────
+async function loadAllData(){
+  // Points config
+  const pdoc = await getDoc(doc(db,'config','points'));
+  if(pdoc.exists()){ state.points = pdoc.data().list || []; }
+  else { state.points = structuredClone(DEFAULT_POINTS); await setDoc(doc(db,'config','points'),{list:state.points}); }
+  state.points.forEach(p=>{ if(!p.address) p.address=''; p.items.forEach(it=>{ if(!it.pricePerUnit) it.pricePerUnit=0; }); });
 
-function showPinOverlay(){
-  document.getElementById('pinOverlay').style.display='flex';
-  document.getElementById('lockBtn').style.display='none';
-  document.getElementById('unlockBtn').style.display='none';
-}
+  // Settings
+  const sdoc = await getDoc(doc(db,'config','settings'));
+  if(sdoc.exists()){
+    const s=sdoc.data();
+    state.restirkaItems = s.restirkaItems || DEFAULT_SETTINGS.restirkaItems;
+    state.restirkaTariff = s.restirkaTariff || 100;
+    state.expenseCategories = s.expenseCategories || DEFAULT_SETTINGS.expenseCategories;
+  } else { await setDoc(doc(db,'config','settings'),DEFAULT_SETTINGS); }
 
-function hidePinOverlay(){
-  document.getElementById('pinOverlay').style.display='none';
-}
-
-function updateLockUI(){
-  const lb = document.getElementById('lockBtn');
-  const ub = document.getElementById('unlockBtn');
-  if(!state.adminPin){ lb.style.display='none'; ub.style.display='none'; return; }
-  if(isAdmin){ lb.style.display='none'; ub.style.display='inline'; }
-  else { lb.style.display='inline'; ub.style.display='none'; }
-  // Hide settings tab for non-admins
-  document.querySelectorAll('.tab').forEach(t=>{
-    if(t.dataset.tab==='settings'||t.dataset.tab==='expenses'){
-      t.style.display = isAdmin ? '' : 'none';
-    }
+  // Entries
+  state.entries={};
+  (await getDocs(collection(db,'entries'))).forEach(d=>{
+    const e={...d.data(),id:d.id};
+    if(!state.entries[e.pointId]) state.entries[e.pointId]=[];
+    state.entries[e.pointId].push(e);
   });
+
+  // Restirka
+  state.restirka={};
+  (await getDocs(collection(db,'restirka'))).forEach(d=>{
+    const r={...d.data(),id:d.id};
+    if(!state.restirka[r.pointId]) state.restirka[r.pointId]=[];
+    state.restirka[r.pointId].push(r);
+  });
+
+  // Expenses
+  state.expenses=[];
+  (await getDocs(collection(db,'expenses'))).forEach(d=>state.expenses.push({...d.data(),id:d.id}));
+
+  // Driver
+  state.driverNotes=[];
+  (await getDocs(collection(db,'driverNotes'))).forEach(d=>state.driverNotes.push({...d.data(),id:d.id}));
 }
 
-document.getElementById('pinEnterBtn').addEventListener('click', ()=>{
-  const val = document.getElementById('pinInput').value.trim();
-  if(val === state.adminPin){
-    isAdmin = true;
-    hidePinOverlay();
-    updateLockUI();
-    render();
-  } else {
-    document.getElementById('pinError').textContent = 'Неверный PIN';
-    document.getElementById('pinInput').value='';
+async function savePoints(){ await setDoc(doc(db,'config','points'),{list:state.points}); }
+async function saveSettings(){ await setDoc(doc(db,'config','settings'),{restirkaItems:state.restirkaItems,restirkaTariff:state.restirkaTariff,expenseCategories:state.expenseCategories}); }
+
+async function addEntry(pointId, data){
+  const ref=await addDoc(collection(db,'entries'),{...data,pointId});
+  const e={...data,pointId,id:ref.id};
+  if(!state.entries[pointId]) state.entries[pointId]=[];
+  state.entries[pointId].push(e);
+  return e;
+}
+async function delEntry(id, pointId){
+  await deleteDoc(doc(db,'entries',id));
+  state.entries[pointId]=(state.entries[pointId]||[]).filter(e=>e.id!==id);
+}
+
+async function addRestirka(pointId, data){
+  const ref=await addDoc(collection(db,'restirka'),{...data,pointId});
+  const r={...data,pointId,id:ref.id};
+  if(!state.restirka[pointId]) state.restirka[pointId]=[];
+  state.restirka[pointId].push(r);
+}
+async function delRestirka(id, pointId){
+  await deleteDoc(doc(db,'restirka',id));
+  state.restirka[pointId]=(state.restirka[pointId]||[]).filter(r=>r.id!==id);
+}
+
+async function addExpense(data){
+  const ref=await addDoc(collection(db,'expenses'),data);
+  state.expenses.push({...data,id:ref.id});
+}
+async function delExpense(id){ await deleteDoc(doc(db,'expenses',id)); state.expenses=state.expenses.filter(e=>e.id!==id); }
+
+async function addDriver(data){
+  const ref=await addDoc(collection(db,'driverNotes'),data);
+  state.driverNotes.push({...data,id:ref.id});
+}
+async function delDriver(id){ await deleteDoc(doc(db,'driverNotes',id)); state.driverNotes=state.driverNotes.filter(d=>d.id!==id); }
+
+// ─── Auth ─────────────────────────────────────────────────────────
+function showAuthOverlay(){
+  const ov=document.getElementById('authOverlay');
+  ov.style.display='flex';
+  document.getElementById('authError').textContent='';
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+}
+function hideAuthOverlay(){ document.getElementById('authOverlay').style.display='none'; }
+
+function updateTopbar(){
+  document.getElementById('adminBadge').style.display=isAdmin?'inline':'none';
+  document.getElementById('loginBtn').style.display=(!isAdmin&&state.points.length)?'inline':'none';
+  document.getElementById('logoutBtn').style.display=isAdmin?'inline':'none';
+  document.getElementById('settingsTab').style.display=isAdmin?'':'none';
+}
+
+document.getElementById('authLoginBtn').addEventListener('click', async()=>{
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPassword').value;
+  const errEl=document.getElementById('authError');
+  if(!email||!pass){ errEl.textContent='Введи email и пароль'; return; }
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+    hideAuthOverlay();
+  } catch(e){
+    errEl.textContent='Неверный email или пароль';
   }
 });
-document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('pinEnterBtn').click(); });
-document.getElementById('pinViewOnlyBtn').addEventListener('click', ()=>{
-  hidePinOverlay();
-  updateLockUI();
-  render();
-});
-document.getElementById('lockBtn').addEventListener('click', ()=>showPinOverlay());
-document.getElementById('unlockBtn').addEventListener('click', ()=>{
-  isAdmin = false;
-  updateLockUI();
-  // Switch to dashboard if on restricted tab
-  if(view.tab==='settings'||view.tab==='expenses') view={tab:'dashboard',pointId:null};
-  render();
-});
+document.getElementById('authPassword').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('authLoginBtn').click(); });
+document.getElementById('authViewOnlyBtn').addEventListener('click',()=>{ hideAuthOverlay(); updateTopbar(); render(); });
+document.getElementById('loginBtn').addEventListener('click',()=>showAuthOverlay());
+document.getElementById('logoutBtn').addEventListener('click',async()=>{ await signOut(auth); });
 
-document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
-
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    view = {tab:t.dataset.tab, pointId:null};
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    render();
-  });
-});
-
-function pointEntries(id){ return state.entries[id] || []; }
-function pointMonthEntries(id, mk){ return pointEntries(id).filter(e=>monthKey(e.date)===mk); }
-
-function restirkaEntries(id){ return state.restirka[id] || []; }
-function restirkaMonthEntries(id, mk){ return restirkaEntries(id).filter(r=>monthKey(r.date)===mk); }
-
+// ─── Totals ───────────────────────────────────────────────────────
+function pointEntries(id){ return state.entries[id]||[]; }
+function pointRestirka(id){ return state.restirka[id]||[]; }
 function pointMonthTotals(id, mk){
-  const es = pointMonthEntries(id, mk);
-  const p = state.points.find(x=>x.id===id);
-  const kgMain = fmt(es.reduce((s,e)=>s+(e.kg||0),0));
-  const days = es.length;
-  const rEntries = restirkaMonthEntries(id, mk);
-  const kgRestirka = fmt(rEntries.reduce((s,r)=>s+(r.kg||0),0));
-  const rubRestirka = fmt(rEntries.reduce((s,r)=>s+(r.rub||0),0));
-  let rubMain = 0, subLabel = '';
-  if(p.pricingType === 'abonement'){
-    const overKg = Math.max(0, kgMain - p.capKg);
-    rubMain = p.abonementFee + overKg*p.tariff;
-    subLabel = overKg>0 ? `+${fmt(overKg)} кг сверх` : `до ${p.capKg} кг`;
-  } else {
-    rubMain = fmt(kgMain*p.tariff);
-    subLabel = p.tariff+'₽/кг';
-  }
-  const kgTotal = fmt(kgMain + kgRestirka);
-  const rubTotal = fmt(rubMain + rubRestirka);
-  return {kg:kgTotal, kgMain, kgRestirka, rub:rubTotal, rubMain, rubRestirka, days, subLabel};
+  const p=state.points.find(x=>x.id===id);
+  const es=pointEntries(id).filter(e=>monthKey(e.date)===mk);
+  const rs=pointRestirka(id).filter(r=>monthKey(r.date)===mk);
+  const kgMain=fmt(es.reduce((s,e)=>s+(e.kg||0),0));
+  const kgRest=fmt(rs.reduce((s,r)=>s+(r.kg||0),0));
+  const rubRest=rs.reduce((s,r)=>s+(r.rub||0),0);
+  let rubMain=0, subLabel='';
+  if(p.pricingType==='abonement'){
+    const over=Math.max(0,kgMain-p.capKg);
+    rubMain=p.abonementFee+over*p.tariff;
+    subLabel=over>0?`+${fmt(over)} кг сверх`:`до ${p.capKg} кг`;
+  } else { rubMain=Math.round(kgMain*p.tariff); subLabel=p.tariff+'₽/кг'; }
+  return {kg:fmt(kgMain+kgRest),kgMain,kgRest,rub:rubMain+rubRest,rubMain,rubRest,days:es.length,subLabel};
 }
 
-function getPointDayBlocks(pid){
-  const blocks = {};
-  pointEntries(pid).forEach(e=>{
-    if(!blocks[e.date]) blocks[e.date] = {date:e.date, mains:[], rests:[]};
-    blocks[e.date].mains.push(e);
-  });
-  restirkaEntries(pid).forEach(r=>{
-    if(!blocks[r.date]) blocks[r.date] = {date:r.date, mains:[], rests:[]};
-    blocks[r.date].rests.push(r);
-  });
-  return Object.values(blocks).sort((a,b)=>a.date.localeCompare(b.date));
-}
+// ─── Render ───────────────────────────────────────────────────────
+const TITLES={dashboard:'Дашборд',points:'Точки',restirka:'Перестирка',expenses:'Расходы',driver:'Водитель',settings:'Настройки'};
 
-const MONTH_NAMES_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const DAY_NAMES_RU = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-function getDayOfWeek(dateStr){ return DAY_NAMES_RU[new Date(dateStr).getDay()]; }
-function daysInMonth(yr, mo){ return new Date(yr, mo, 0).getDate(); }
-
-function buildYearlyWorkbook(p, year){
-  if(typeof XLSX === 'undefined'){ showToast('Нет соединения для экспорта'); return null; }
-  const wb = XLSX.utils.book_new();
-  const yr = year || new Date().getFullYear();
-  const monthTotalsForSummary = [];
-
-  for(let mo=1; mo<=12; mo++){
-    const mk = `${yr}-${String(mo).padStart(2,'0')}`;
-    const moName = MONTH_NAMES_RU[mo-1];
-    const numDays = daysInMonth(yr, mo);
-
-    const mEntries = pointEntries(p.id).filter(e=>monthKey(e.date)===mk);
-    const mRest    = restirkaEntries(p.id).filter(r=>monthKey(r.date)===mk);
-
-    // index by day
-    const byDay = {};
-    for(let d=1;d<=numDays;d++) byDay[d]={kg:0, items:{}, restKg:0, restRub:0, note:'', hasData:false};
-    mEntries.forEach(e=>{
-      const d=parseInt(e.date.split('-')[2]);
-      byDay[d].kg += e.kg||0;
-      byDay[d].hasData = true;
-      if(e.note) byDay[d].note = byDay[d].note ? byDay[d].note+'; '+e.note : e.note;
-      Object.entries(e.items||{}).forEach(([iid,n])=>{ byDay[d].items[iid]=(byDay[d].items[iid]||0)+n; });
-    });
-    mRest.forEach(r=>{
-      const d=parseInt(r.date.split('-')[2]);
-      byDay[d].restKg += r.kg||0; byDay[d].restRub += r.rub||0; byDay[d].hasData=true;
-    });
-
-    // calc totals
-    let totalKg=0, totalEd=0, totalShtuch=0, totalDays=0, totalRestKg=0, totalRestRub=0;
-    const itemTotals={};
-    p.items.forEach(it=>itemTotals[it.id]=0);
-    for(let d=1;d<=numDays;d++){
-      const row=byDay[d];
-      if(row.kg>0||Object.keys(row.items).length>0) totalDays++;
-      totalKg+=row.kg; totalRestKg+=row.restKg; totalRestRub+=row.restRub;
-      let dayShtuch=0;
-      p.items.forEach(it=>{ const n=row.items[it.id]||0; itemTotals[it.id]+=n; totalEd+=n; if(it.pricePerUnit>0) dayShtuch+=n*it.pricePerUnit; });
-      totalShtuch+=dayShtuch;
-      row._shtuch=dayShtuch;
-    }
-    let totalMainRub=0;
-    if(p.pricingType==='abonement'){
-      const over=Math.max(0,totalKg-p.capKg);
-      totalMainRub=p.abonementFee+over*p.tariff;
-    } else { totalMainRub=Math.round(totalKg*p.tariff); }
-    const totalRub=totalMainRub+totalShtuch+totalRestRub;
-
-    monthTotalsForSummary.push({mo, moName, totalDays, totalKg:fmt(totalKg), totalRestKg:fmt(totalRestKg), totalEd, totalMainRub, totalShtuch, totalRestRub, totalRub});
-
-    // ── build rows ──
-    const rows=[];
-    rows.push([null, `${p.name.toUpperCase()} · ${moName.toUpperCase()} ${yr}`]);
-    rows.push([null, `${p.name} · Учёт стирки за ${moName.toLowerCase()} ${yr}`]);
-    rows.push([]);
-    // summary bar
-    rows.push([null,'ВЕС, КГ',null,null,null,null,'ЕДИНИЦ',null,null,null,null,'ДНЕЙ СТИРКИ',null,null,null,null,'К ОПЛАТЕ, ₽']);
-    rows.push([null,fmt(totalKg+totalRestKg),null,null,null,null,totalEd,null,null,null,null,totalDays,null,null,null,null,totalRub]);
-    rows.push([]);
-    // pricing info
-    if(p.pricingType==='abonement'){
-      rows.push([null,`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг). Сверх: ${p.tariff} ₽/кг`]);
-    } else {
-      rows.push([null,`Тариф: ${p.tariff} ₽/кг`]);
-    }
-    rows.push([]);
-    // column headers
-    const itemNames=p.items.map(it=>it.name);
-    rows.push([null,'День','ДН','Вес, кг','Всего ед.',...itemNames,'Перест.,кг','Заметки','Стирка,₽','Штучные,₽','Надбавки,₽','Доставка,₽','К оплате,₽']);
-    // day rows
-    for(let d=1;d<=numDays;d++){
-      const row=byDay[d];
-      const dateStr=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const dn=getDayOfWeek(dateStr);
-      const ed=p.items.reduce((s,it)=>s+(row.items[it.id]||0),0);
-      const itemCols=p.items.map(it=>row.items[it.id]||null);
-      const dayMainRub=p.pricingType==='perkg'&&row.kg>0 ? Math.round(row.kg*p.tariff) : null;
-      const kToPlate=(dayMainRub||0)+(row._shtuch||0)+row.restRub || null;
-      rows.push([null,d,dn,row.kg||null,ed||null,...itemCols,
-        row.restKg||null, row.note||null,
-        dayMainRub, row._shtuch||null, null, null, kToPlate]);
-    }
-    // итого
-    const itemTotalCols=p.items.map(it=>itemTotals[it.id]||null);
-    rows.push([null,'ИТОГО',null,
-      totalKg?fmt(totalKg):null, totalEd||null, ...itemTotalCols,
-      totalRestKg?fmt(totalRestKg):null, null,
-      totalMainRub||null, totalShtuch||null, null, null, totalRub||null]);
-
-    if(mRest.length){
-      rows.push([]);
-      rows.push([null,`ПЕРЕСТИРКА (${state.restirkaTariff} ₽/кг)`]);
-      rows.push([null,'Дата','кг',...state.restirkaItems.map(it=>it.name+' шт'),'Сумма,₽']);
-      mRest.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
-        rows.push([null,r.date,r.kg,...state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||null),r.rub]);
-      });
-      rows.push([null,'Итого перестирка',fmt(totalRestKg),...state.restirkaItems.map(()=>null),Math.round(totalRestRub)]);
-    }
-
-    const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:2},{wch:6},{wch:4},{wch:8},{wch:8},...p.items.map(()=>({wch:9})),{wch:10},{wch:22},{wch:10},{wch:10},{wch:10},{wch:10},{wch:12}];
-    const sheetName=`${String(mo).padStart(2,'0')}.${moName.slice(0,3)}`;
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  }
-
-  // ── Summary sheet (like 🎯 Дашборд) ──
-  const sumRows=[];
-  sumRows.push([null,`${p.name} · ГОДОВОЙ ОТЧЁТ ${yr}`]);
-  sumRows.push([]);
-  sumRows.push([null,p.pricingType==='abonement'?`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг)`:`Тариф: ${p.tariff} ₽/кг`]);
-  sumRows.push([]);
-  sumRows.push([null,'Месяц','Дней','Кг стирка','Кг перест.','Итого кг','Ед.',`Стирка,₽`,'Штучные,₽','Перест.,₽','К оплате,₽']);
-  let gKg=0,gRub=0,gDays=0;
-  monthTotalsForSummary.forEach(t=>{
-    const totKg=fmt((parseFloat(t.totalKg)||0)+(parseFloat(t.totalRestKg)||0));
-    sumRows.push([null,t.moName,t.totalDays||null,t.totalKg||null,t.totalRestKg||null,totKg||null,t.totalEd||null,t.totalMainRub||null,t.totalShtuch||null,t.totalRestRub||null,t.totalRub||null]);
-    gKg+=parseFloat(totKg)||0; gRub+=t.totalRub||0; gDays+=t.totalDays||0;
-  });
-  sumRows.push([null,'ИТОГО ЗА ГОД',gDays,null,null,fmt(gKg),null,null,null,null,Math.round(gRub)]);
-  const wsSumm=XLSX.utils.aoa_to_sheet(sumRows);
-  wsSumm['!cols']=[{wch:2},{wch:14},{wch:6},{wch:12},{wch:12},{wch:10},{wch:6},{wch:12},{wch:12},{wch:12},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, wsSumm, '📊 Годовая сводка');
-
-  return wb;
-}
-
-function exportPointExcel(pid){
-  const p=state.points.find(x=>x.id===pid);
-  const yr=new Date().getFullYear();
-  showToast('Формирую годовой Excel...');
-  setTimeout(()=>{
-    const wb=buildYearlyWorkbook(p, yr);
-    if(!wb) return;
-    XLSX.writeFile(wb, `${p.name.replace(/\s+/g,'_')}_${yr}.xlsx`);
-    showToast('Готово!');
-  },50);
-}
-
-function exportAllExcel(){
-  if(typeof XLSX==='undefined'){ showToast('Нет соединения для экспорта'); return; }
-  const yr=new Date().getFullYear();
-  showToast('Формирую сводный файл...');
-  setTimeout(()=>{
-    const wb=XLSX.utils.book_new();
-    // Summary across all points
-    const mk=thisMonthKey();
-    const sumRows=[];
-    sumRows.push([null,`СВОДКА ПО ВСЕМ ТОЧКАМ · ${yr}`]);
-    sumRows.push([]);
-    sumRows.push([null,'Точка','Адрес','Кг (стирка)','Кг (перест.)','Итого кг','К оплате,₽']);
-    let gKg=0,gRub=0;
-    state.points.forEach(p=>{
-      const t=pointMonthTotals(p.id,mk);
-      sumRows.push([null,p.name,p.address||'',t.kgMain,t.kgRestirka,t.kg,Math.round(t.rub)]);
-      gKg+=parseFloat(t.kg)||0; gRub+=parseFloat(t.rub)||0;
-    });
-    sumRows.push([null,'ИТОГО','','','',fmt(gKg),Math.round(gRub)]);
-    const wsS=XLSX.utils.aoa_to_sheet(sumRows);
-    wsS['!cols']=[{wch:2},{wch:16},{wch:22},{wch:12},{wch:12},{wch:10},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,wsS,'Сводка');
-    // Per-point yearly tabs
-    state.points.forEach(p=>{
-      const ptWb=buildYearlyWorkbook(p,yr);
-      if(!ptWb) return;
-      ptWb.SheetNames.forEach(sn=>{
-        const label=(p.name.slice(0,8)+' '+sn).slice(0,31);
-        XLSX.utils.book_append_sheet(wb,ptWb.Sheets[sn],label);
-      });
-    });
-    XLSX.writeFile(wb,`Прачечная_${yr}.xlsx`);
-    showToast('Готово!');
-  },50);
-}
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  currentView={tab:t.dataset.tab,pointId:null,settingPointId:null};
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  render();
+}));
 
 function render(){
-  const titles = {dashboard:'Дашборд', points:'Точки', restirka:'Перестирка', expenses:'Расходы', driver:'Водитель', settings:'Настройки'};
-  document.getElementById('topTitle').textContent = view.pointId ? (state.points.find(p=>p.id===view.pointId)?.name||'') : view.settingPointId ? 'Настройка точки' : titles[view.tab];
-  updateLockUI();
-  const el = document.getElementById('view');
-  el.innerHTML = '';
-  if(view.tab==='dashboard') renderDashboard(el);
-  else if(view.tab==='points') view.pointId ? renderPointDetail(el) : renderPoints(el);
-  else if(view.tab==='restirka') renderRestirka(el);
-  else if(view.tab==='expenses') renderExpenses(el);
-  else if(view.tab==='driver') renderDriver(el);
-  else if(view.tab==='settings') view.settingPointId ? renderSettingsPoint(el) : renderSettings(el);
+  const v=currentView;
+  let title=v.pointId?(state.points.find(p=>p.id===v.pointId)?.name||''):v.settingPointId?'Настройка точки':TITLES[v.tab]||'';
+  document.getElementById('topTitle').textContent=title;
+  updateTopbar();
+  const el=document.getElementById('view');
+  el.innerHTML='';
+  if(v.tab==='dashboard') renderDashboard(el);
+  else if(v.tab==='points') v.pointId?renderPointDetail(el):renderPoints(el);
+  else if(v.tab==='restirka') renderRestirka(el);
+  else if(v.tab==='expenses') renderExpenses(el);
+  else if(v.tab==='driver') renderDriver(el);
+  else if(v.tab==='settings') v.settingPointId?renderSettingsPoint(el):renderSettings(el);
 }
 
+// ── Dashboard ──
 function renderDashboard(el){
-  const mk = thisMonthKey();
-  let totalKg=0, totalRub=0, totalDays=0;
-  state.points.forEach(p=>{ const t = pointMonthTotals(p.id, mk); totalKg += t.kg; totalRub += t.rub; totalDays += t.days; });
-  const expMonth = state.expenses.filter(e=>monthKey(e.date)===mk).reduce((s,e)=>s+(e.amount||0),0);
-  const restMonth = Object.values(state.restirka).flat().filter(r=>monthKey(r.date)===mk).reduce((s,r)=>s+(r.rub||0),0);
-
-  el.innerHTML = `
+  const mk=thisMonth();
+  let tKg=0,tRub=0,tDays=0;
+  state.points.forEach(p=>{ const t=pointMonthTotals(p.id,mk); tKg+=parseFloat(t.kg)||0; tRub+=t.rub; tDays+=t.days; });
+  const expRub=state.expenses.filter(e=>monthKey(e.date)===mk).reduce((s,e)=>s+(e.amount||0),0);
+  const restRub=Object.values(state.restirka).flat().filter(r=>monthKey(r.date)===mk).reduce((s,r)=>s+(r.rub||0),0);
+  el.innerHTML=`
     <div class="grid2">
-      <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${fmt(totalKg)}</div></div>
-      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(totalRub)}</div></div>
-      <div class="stat"><div class="label">Выездов</div><div class="val">${totalDays}</div></div>
-      <div class="stat"><div class="label">Расходы прачечной</div><div class="val">${rub(expMonth)}</div></div>
+      <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${fmt(tKg)}</div></div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(tRub)}</div></div>
+      <div class="stat"><div class="label">Выездов</div><div class="val">${tDays}</div></div>
+      <div class="stat"><div class="label">Расходы</div><div class="val">${rub(expRub)}</div></div>
     </div>
-    <div class="section-title"><span>Точки · этот месяц</span><span class="more" data-go="points">все →</span></div>
-    <div id="dashPoints"></div>
-    ${restMonth ? `<div class="section-title">Перестирка</div><div class="stat"><div class="label">За месяц</div><div class="val amber">${rub(restMonth)}</div></div>` : ''}
+    <div class="section-title"><span>Точки · месяц</span><span class="more" id="dashMore">все →</span></div>
+    <div id="dashPts"></div>
+    ${restRub?`<div class="section-title">Перестирка</div><div class="stat"><div class="label">За месяц</div><div class="val amber">${rub(restRub)}</div></div>`:''}
   `;
-  const dp = el.querySelector('#dashPoints');
-  state.points.forEach((p,i)=>dp.appendChild(pointCardEl(p, pointMonthTotals(p.id, mk), i)));
-  el.querySelector('[data-go="points"]').addEventListener('click', ()=>{
-    view={tab:'points', pointId:null};
-    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab==='points'));
-    render();
-  });
+  el.querySelector('#dashMore').onclick=()=>{ currentView.tab='points'; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='points')); render(); };
+  const dp=el.querySelector('#dashPts');
+  state.points.forEach((p,i)=>dp.appendChild(mkPointCard(p,pointMonthTotals(p.id,mk),i)));
 }
 
-function pointCardEl(p, t, i){
-  const div = document.createElement('div');
-  div.className = 'point-card';
-  const metaStr = t.kgRestirka>0
-    ? `${t.kgMain} + ${t.kgRestirka} (перест.) кг · ${t.days} ${t.days===1?'выезд':'выездов'}`
-    : `${t.kg} кг · ${t.days} ${t.days===1?'выезд':'выездов'}`;
-  div.innerHTML = `
-    <div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div>
-    <div style="flex:1; min-width:0;">
-      <div class="pname">${p.name}</div>
-      <div class="pmeta">${metaStr}</div>
-    </div>
-    <div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div>
-    <div class="chev">›</div>
-  `;
-  div.addEventListener('click', ()=>{
-    view = {tab:'points', pointId:p.id};
-    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab==='points'));
-    render();
-  });
+function mkPointCard(p,t,i){
+  const div=document.createElement('div');
+  div.className='point-card';
+  const meta=t.kgRest>0?`${t.kgMain}+${t.kgRest}п кг · ${t.days} вых.`:`${t.kg} кг · ${t.days} вых.`;
+  div.innerHTML=`<div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div><div style="flex:1;min-width:0;"><div class="pname">${p.name}</div><div class="pmeta">${meta}</div></div><div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div><div class="chev">›</div>`;
+  div.onclick=()=>{ currentView={tab:'points',pointId:p.id,settingPointId:null}; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='points')); render(); };
   return div;
 }
 
+// ── Points list ──
 function renderPoints(el){
-  const mk = thisMonthKey();
-  const topRow = document.createElement('div');
-  topRow.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:10px;';
-  topRow.innerHTML = `<button class="btn btn-sm" id="exportAllBtn">⬇ Excel · все точки</button>`;
-  el.appendChild(topRow);
-  topRow.querySelector('#exportAllBtn').addEventListener('click', exportAllExcel);
-  const wrap = document.createElement('div');
-  state.points.forEach((p,i)=>wrap.appendChild(pointCardEl(p, pointMonthTotals(p.id, mk), i)));
+  const mk=thisMonth();
+  const top=document.createElement('div');
+  top.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px;';
+  top.innerHTML=`<button class="btn btn-sm" id="expAllBtn">⬇ Excel все точки</button>`;
+  el.appendChild(top);
+  top.querySelector('#expAllBtn').onclick=exportAllExcel;
+  const wrap=document.createElement('div');
+  state.points.forEach((p,i)=>wrap.appendChild(mkPointCard(p,pointMonthTotals(p.id,mk),i)));
   el.appendChild(wrap);
 }
 
+// ── Point detail ──
 function renderPointDetail(el){
-  const p = state.points.find(x=>x.id===view.pointId);
-  const entries = pointEntries(p.id).slice().sort((a,b)=>b.date.localeCompare(a.date));
-  const mk = thisMonthKey();
-  const t = pointMonthTotals(p.id, mk);
-
-  el.innerHTML = `
-    <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span><span style="flex:1;"></span><button class="btn btn-sm" id="exportBtn">⬇ Excel</button></div>
+  const p=state.points.find(x=>x.id===currentView.pointId);
+  const mk=thisMonth(); const t=pointMonthTotals(p.id,mk);
+  el.innerHTML=`
+    <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span><button class="btn btn-sm" id="expPtBtn">⬇ Excel</button></div>
     <div class="grid2">
-      <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${t.kg}</div>
-        ${t.kgRestirka>0 ? `<div class="sub2">${t.kgMain} стирка + ${t.kgRestirka} перест.</div>` : ''}
-      </div>
-      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div>
-        ${t.kgRestirka>0 ? `<div class="sub2">${rub(t.rubMain)} + ${rub(t.rubRestirka)} перест.</div>` : `<div class="sub2">${t.subLabel}</div>`}
-      </div>
+      <div class="stat"><div class="label">Кг месяц</div><div class="val steam">${t.kg}</div>${t.kgRest>0?`<div class="sub2">${t.kgMain} + ${t.kgRest} перест.</div>`:''}</div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div><div class="sub2">${t.kgRest>0?rub(t.rubMain)+' + '+rub(t.rubRest)+' п.':t.subLabel}</div></div>
     </div>
-
+    ${isAdmin?`
     <div class="card" style="margin-top:14px;">
-      <div class="seg">
-        <div data-pt="perkg" class="${p.pricingType==='perkg'?'active':''}">За кг</div>
-        <div data-pt="abonement" class="${p.pricingType==='abonement'?'active':''}">Абонемент</div>
-      </div>
-      <div id="pricingFields"></div>
-    </div>
-
-    ${isAdmin ? `
-    <div class="card">
-      <label class="f"><span class="flabel">Дата</span><input type="date" id="dateInput" value="${todayStr()}"></label>
-      <label class="f"><span class="flabel">Вес, кг (по весам)</span><input type="number" id="kgInput" placeholder="0" step="0.1"></label>
-      <div class="section-title" style="margin:14px 0 6px;">Позиции, шт</div>
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="eDate" value="${todayStr()}"></label>
+      <label class="f"><span class="flabel">Вес, кг</span><input type="number" id="eKg" placeholder="0" step="0.1"></label>
+      <div class="section-title" style="margin:12px 0 6px;">Позиции, шт</div>
       <div id="itemFields"></div>
-      <div class="addrow">
-        <input type="text" id="newItemName" placeholder="добавить позицию...">
-        <button class="btn btn-sm" id="addItemBtn">+</button>
-      </div>
-      <label class="f" style="margin-top:12px;"><span class="flabel">Заметка</span><input type="text" id="noteInput" placeholder="срочно, доставка и т.д."></label>
+      <div class="addrow"><input type="text" id="newItemName" placeholder="добавить позицию..."><button class="btn btn-sm" id="addItemBtn">+</button></div>
+      <label class="f" style="margin-top:10px;"><span class="flabel">Заметка</span><input type="text" id="eNote" placeholder="срочно, доставка..."></label>
       <button class="btn btn-primary btn-block" id="addEntryBtn">Добавить запись</button>
-    </div>
-    ` : `<div class="card" style="padding:14px;"><div class="hint" style="margin:0;">👁 Режим просмотра — добавление записей недоступно</div></div>`}
-
+    </div>`:'<div class="card"><div class="hint" style="margin:0;">👁 Режим просмотра</div></div>'}
     <div class="section-title">История</div>
-    <div class="card" id="historyCard" style="padding:6px 14px;"></div>
+    <div class="card" id="histCard" style="padding:6px 14px;"></div>
   `;
+  el.querySelector('#backBtn').onclick=()=>{ currentView.pointId=null; render(); };
+  el.querySelector('#expPtBtn').onclick=()=>exportPointExcel(p.id);
 
-  el.querySelector('#backBtn').addEventListener('click', ()=>{ view.pointId=null; render(); });
-  el.querySelector('#exportBtn').addEventListener('click', ()=>exportPointExcel(p.id));
-
-  function renderPricingFields(){
-    const pf = el.querySelector('#pricingFields');
-    if(!isAdmin){ pf.innerHTML=`<div class="hint" style="margin:0;">${p.pricingType==='abonement'?`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг)`:`Тариф: ${p.tariff} ₽/кг`}</div>`; return; }
-    if(p.pricingType==='abonement'){
-      pf.innerHTML = `
-        <label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="abonementFee" value="${p.abonementFee}" step="1000"></label>
-        <label class="f"><span class="flabel">Включено кг/мес</span><input type="number" id="capKg" value="${p.capKg}" step="10"></label>
-        <label class="f"><span class="flabel">Доплата за кг сверх лимита, ₽</span><input type="number" id="tariffInput" value="${p.tariff}" step="1"></label>
-      `;
-      pf.querySelector('#abonementFee').addEventListener('change', e=>{ p.abonementFee=parseFloat(e.target.value)||0; saveState(); render(); });
-      pf.querySelector('#capKg').addEventListener('change', e=>{ p.capKg=parseFloat(e.target.value)||0; saveState(); render(); });
-      pf.querySelector('#tariffInput').addEventListener('change', e=>{ p.tariff=parseFloat(e.target.value)||0; saveState(); render(); });
-    } else {
-      pf.innerHTML = `<label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="tariffInput" value="${p.tariff}" step="1"></label>`;
-      pf.querySelector('#tariffInput').addEventListener('change', e=>{ p.tariff=parseFloat(e.target.value)||0; saveState(); render(); });
-    }
-  }
-  renderPricingFields();
-  el.querySelectorAll('.seg div').forEach(d=>{
-    d.addEventListener('click', ()=>{ p.pricingType = d.dataset.pt; saveState(); render(); });
-  });
-
-  if(el.querySelector('#itemFields')){
-    const ifld = el.querySelector('#itemFields');
-    function renderItemFields(){
+  if(isAdmin){
+    const ifld=el.querySelector('#itemFields');
+    const renderItemFields=()=>{
       ifld.innerHTML='';
       p.items.forEach(it=>{
-        const row = document.createElement('div');
-        row.className = 'item-grid';
-        row.style.gridTemplateColumns = '1fr 64px';
-        const priceHint = it.pricePerUnit>0 ? ` <span style="color:var(--amber);font-size:11px;">${it.pricePerUnit}₽/шт</span>` : '';
-        row.innerHTML = `<span class="iname">${it.name}${priceHint}</span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
-        ifld.appendChild(row);
+        const r=document.createElement('div'); r.className='item-grid';
+        r.innerHTML=`<span class="iname">${it.name}${it.pricePerUnit>0?` <span style="color:var(--amber);font-size:11px;">${it.pricePerUnit}₽/шт</span>`:''}</span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
+        ifld.appendChild(r);
       });
-    }
+    };
     renderItemFields();
-
-    el.querySelector('#addItemBtn').addEventListener('click', ()=>{
-      const inp = el.querySelector('#newItemName');
-      const name = inp.value.trim();
+    el.querySelector('#addItemBtn').onclick=()=>{
+      const inp=el.querySelector('#newItemName'); const name=inp.value.trim();
       if(!name) return;
-      const id = name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
-      p.items.push({id, name, pricePerUnit:0});
-      inp.value='';
-      saveState(); renderItemFields();
-    });
-
-    el.querySelector('#addEntryBtn').addEventListener('click', ()=>{
-      const date = el.querySelector('#dateInput').value || todayStr();
-      const kg = parseFloat(el.querySelector('#kgInput').value);
-      const note = el.querySelector('#noteInput').value.trim();
-      const items = {};
-      el.querySelectorAll('[data-item]').forEach(inp=>{
-        const n = parseInt(inp.value)||0;
-        if(n>0) items[inp.dataset.item]=n;
-      });
-      if(!kg && !Object.keys(items).length){ showToast('Укажи вес или позиции'); return; }
-      if(!state.entries[p.id]) state.entries[p.id]=[];
-      state.entries[p.id].push({date, kg: kg||0, items, note});
-      saveState(); showToast('Запись добавлена'); render();
-    });
+      p.items.push({id:name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now(),name,pricePerUnit:0});
+      savePoints(); inp.value=''; renderItemFields();
+    };
+    el.querySelector('#addEntryBtn').onclick=async()=>{
+      const date=el.querySelector('#eDate').value||todayStr();
+      const kg=parseFloat(el.querySelector('#eKg').value)||0;
+      const note=el.querySelector('#eNote').value.trim();
+      const items={};
+      el.querySelectorAll('[data-item]').forEach(inp=>{ const n=parseInt(inp.value)||0; if(n>0) items[inp.dataset.item]=n; });
+      if(!kg&&!Object.keys(items).length){ showToast('Укажи вес или позиции'); return; }
+      el.querySelector('#addEntryBtn').textContent='Сохраняю...';
+      await addEntry(p.id,{date,kg,items,note});
+      showToast('Запись добавлена'); render();
+    };
   }
 
-  const hc = el.querySelector('#historyCard');
-  const blocks = {};
-  pointEntries(p.id).forEach(e=>{
-    if(!blocks[e.date]) blocks[e.date] = {date:e.date, mains:[], rests:[]};
-    blocks[e.date].mains.push(e);
-  });
-  restirkaEntries(p.id).forEach(r=>{
-    if(!blocks[r.date]) blocks[r.date] = {date:r.date, mains:[], rests:[]};
-    blocks[r.date].rests.push(r);
-  });
-  const blockList = Object.values(blocks).sort((a,b)=>b.date.localeCompare(a.date));
+  // History — grouped by date
+  const hc=el.querySelector('#histCard');
+  const blocks={};
+  pointEntries(p.id).forEach(e=>{ if(!blocks[e.date]) blocks[e.date]={mains:[],rests:[]}; blocks[e.date].mains.push(e); });
+  pointRestirka(p.id).forEach(r=>{ if(!blocks[r.date]) blocks[r.date]={mains:[],rests:[]}; blocks[r.date].rests.push(r); });
+  const sorted=Object.entries(blocks).sort((a,b)=>b[0].localeCompare(a[0]));
+  if(!sorted.length){ hc.innerHTML=`<div class="empty"><span class="ic">○</span>Нет записей</div>`; return; }
 
-  if(!blockList.length){
-    hc.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет записей по этой точке</div>`;
-  } else {
-    blockList.slice(0,60).forEach(block=>{
-      const wrap = document.createElement('div');
-      wrap.style.borderBottom = '1px solid var(--line-soft)';
-      wrap.style.padding = '10px 0';
-
-      let mainKg = 0, mainRub = 0;
-      block.mains.forEach(e=>{
-        mainKg += e.kg||0;
-        const dayRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : null;
-        if(dayRub!==null) mainRub += dayRub;
-        const itemsStr = e.items && Object.keys(e.items).length
-          ? Object.entries(e.items).map(([iid,n])=>{ const it=p.items.find(x=>x.id===iid); return (it?it.name:iid)+' '+n; }).join(', ')
-          : '';
-        const realIdx = state.entries[p.id].indexOf(e);
-        const row = document.createElement('div');
-        row.className = 'entry-row';
-        row.style.borderBottom = 'none';
-        row.innerHTML = `
-          <span class="ed">${fmtDate(e.date)}</span>
-          <span class="ek">Стирка${e.kg?': '+e.kg+' кг':''}${e.note?' · '+e.note:''}${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
-          <span class="ep">${dayRub!==null ? rub(dayRub) : '—'}</span>
-          ${isAdmin?`<span class="edel" data-mainidx="${realIdx}">✕</span>`:''}
-        `;
-        if(isAdmin) row.querySelector('.edel').addEventListener('click', ()=>{ state.entries[p.id].splice(realIdx,1); saveState(); render(); });
-        wrap.appendChild(row);
-      });
-
-      let restKg = 0, restRub = 0;
-      block.rests.forEach(r=>{
-        restKg += r.kg||0; restRub += r.rub||0;
-        const realIdx = state.restirka[p.id].indexOf(r);
-        const itemsStr = Object.entries(r.qty||{}).map(([iid,n])=>{
-          const it = state.restirkaItems.find(x=>x.id===iid); return (it?it.name:iid)+' '+n;
-        }).join(', ');
-        const row = document.createElement('div');
-        row.className = 'entry-row';
-        row.style.borderBottom = 'none';
-        row.innerHTML = `
-          <span class="ed"></span>
-          <span class="ek" style="color:var(--steam)">Перестирка: ${r.kg} кг${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
-          <span class="ep">${rub(r.rub)}</span>
-          ${isAdmin?`<span class="edel" data-restidx="${realIdx}">✕</span>`:''}
-        `;
-        if(isAdmin) row.querySelector('.edel').addEventListener('click', ()=>{ state.restirka[p.id].splice(realIdx,1); saveState(); render(); });
-        wrap.appendChild(row);
-      });
-
-      if(block.mains.length && block.rests.length){
-        const totalRow = document.createElement('div');
-        totalRow.className = 'entry-row';
-        totalRow.style.borderBottom = 'none';
-        totalRow.innerHTML = `<span class="ed"></span><span class="ek" style="font-weight:600;">Итого за день: ${fmt(mainKg+restKg)} кг</span><span class="ep" style="font-weight:700;">${rub(mainRub+restRub)}</span><span></span>`;
-        wrap.appendChild(totalRow);
-      }
-      hc.appendChild(wrap);
+  sorted.slice(0,60).forEach(([date,block])=>{
+    const wrap=document.createElement('div');
+    wrap.style.borderBottom='1px solid var(--line-soft)';
+    wrap.style.paddingBottom='8px';
+    wrap.style.marginBottom='4px';
+    let mainKg=0,mainRub=0;
+    block.mains.forEach(e=>{
+      mainKg+=e.kg||0;
+      const dayRub=p.pricingType==='perkg'?(e.kg||0)*p.tariff:null;
+      if(dayRub) mainRub+=dayRub;
+      const iStr=Object.entries(e.items||{}).map(([iid,n])=>{ const it=p.items.find(x=>x.id===iid); return (it?it.name:iid)+' '+n; }).join(', ');
+      const row=document.createElement('div'); row.className='entry-row'; row.style.borderBottom='none';
+      row.innerHTML=`<span class="ed">${fmtDate(date)}</span><span class="ek">Стирка${e.kg?' '+e.kg+' кг':''}${e.note?' · '+e.note:''}${iStr?`<div class="eitems">${iStr}</div>`:''}</span><span class="ep">${dayRub!==null?rub(dayRub):'—'}</span>${isAdmin?`<span class="edel" data-eid="${e.id}">✕</span>`:''}`;
+      if(isAdmin) row.querySelector('[data-eid]').onclick=async()=>{ await delEntry(e.id,p.id); render(); };
+      wrap.appendChild(row);
     });
-  }
+    let restKg=0,restRub=0;
+    block.rests.forEach(r=>{
+      restKg+=r.kg||0; restRub+=r.rub||0;
+      const iStr=Object.entries(r.qty||{}).map(([iid,n])=>{ const it=state.restirkaItems.find(x=>x.id===iid); return (it?it.name:iid)+' '+n; }).join(', ');
+      const row=document.createElement('div'); row.className='entry-row'; row.style.borderBottom='none';
+      row.innerHTML=`<span class="ed"></span><span class="ek" style="color:var(--steam)">Перестирка ${r.kg} кг${iStr?`<div class="eitems">${iStr}</div>`:''}</span><span class="ep">${rub(r.rub)}</span>${isAdmin?`<span class="edel" data-rid="${r.id}">✕</span>`:''}`;
+      if(isAdmin) row.querySelector('[data-rid]').onclick=async()=>{ await delRestirka(r.id,p.id); render(); };
+      wrap.appendChild(row);
+    });
+    if(block.mains.length&&block.rests.length){
+      const tot=document.createElement('div'); tot.className='entry-row'; tot.style.borderBottom='none';
+      tot.innerHTML=`<span class="ed"></span><span class="ek" style="font-weight:600;">Итого ${fmt(mainKg+restKg)} кг</span><span class="ep" style="font-weight:700;">${rub(mainRub+restRub)}</span><span></span>`;
+      wrap.appendChild(tot);
+    }
+    hc.appendChild(wrap);
+  });
 }
 
+// ── Restirka ──
 function renderRestirka(el){
-  const mk = thisMonthKey();
-  const allMonth = Object.entries(state.restirka).flatMap(([pid,arr])=>arr.filter(r=>monthKey(r.date)===mk).map(r=>({...r,pid})));
-  const totalKg = fmt(allMonth.reduce((s,r)=>s+r.kg,0));
-  const totalRub = allMonth.reduce((s,r)=>s+r.rub,0);
-
-  el.innerHTML = `
+  const mk=thisMonth();
+  const allM=Object.entries(state.restirka).flatMap(([pid,arr])=>arr.filter(r=>monthKey(r.date)===mk).map(r=>({...r,pid})));
+  const tKg=fmt(allM.reduce((s,r)=>s+r.kg,0));
+  const tRub=allM.reduce((s,r)=>s+r.rub,0);
+  el.innerHTML=`
     <div class="grid2">
-      <div class="stat"><div class="label">Перестирка, месяц</div><div class="val steam">${totalKg} кг</div></div>
-      <div class="stat"><div class="label">Сумма</div><div class="val amber">${rub(totalRub)}</div></div>
+      <div class="stat"><div class="label">Перестирка, месяц</div><div class="val steam">${tKg} кг</div></div>
+      <div class="stat"><div class="label">Сумма</div><div class="val amber">${rub(tRub)}</div></div>
     </div>
+    ${isAdmin?`
     <div class="card" style="margin-top:14px;">
-      <label class="f"><span class="flabel">Ресторан</span>
-        <select id="rPoint">${state.points.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select>
-      </label>
+      <label class="f"><span class="flabel">Ресторан</span><select id="rPt">${state.points.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></label>
       <label class="f"><span class="flabel">Дата</span><input type="date" id="rDate" value="${todayStr()}"></label>
       <div id="rItems"></div>
-      <div class="hint">Тариф перестирки: ${state.restirkaTariff} ₽/кг</div>
+      <div class="hint">Тариф: ${state.restirkaTariff} ₽/кг</div>
       <button class="btn btn-primary btn-block" id="rAddBtn">Добавить</button>
-    </div>
+    </div>`:''}
     <div class="section-title">Последние записи</div>
-    <div class="card" id="rHistory" style="padding:6px 14px;"></div>
+    <div class="card" id="rHist" style="padding:6px 14px;"></div>
   `;
-  const ri = el.querySelector('#rItems');
-  state.restirkaItems.forEach(it=>{
-    const row = document.createElement('div');
-    row.className = 'item-grid';
-    row.innerHTML = `<span class="iname">${it.name} <span style="color:var(--text-faint)">(${it.weight} г)</span></span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
-    ri.appendChild(row);
-  });
-  el.querySelector('#rAddBtn').addEventListener('click', ()=>{
-    const pid = el.querySelector('#rPoint').value;
-    const date = el.querySelector('#rDate').value || todayStr();
-    const qty = {}; let kg = 0;
-    el.querySelectorAll('[data-item]').forEach(inp=>{
-      const n = parseInt(inp.value)||0;
-      if(n>0){ qty[inp.dataset.item]=n; const item = state.restirkaItems.find(x=>x.id===inp.dataset.item); kg += n*item.weight/1000; }
-    });
-    if(!Object.keys(qty).length){ showToast('Укажи количество хотя бы по одной позиции'); return; }
-    kg = fmt(kg);
-    const r2 = fmt(kg*state.restirkaTariff);
-    if(!state.restirka[pid]) state.restirka[pid]=[];
-    state.restirka[pid].push({date, qty, kg, rub:r2});
-    saveState(); showToast('Добавлено'); render();
-  });
-
-  const rh = el.querySelector('#rHistory');
-  const sorted = allMonth.slice().sort((a,b)=>b.date.localeCompare(a.date));
-  if(!sorted.length){
-    rh.innerHTML = `<div class="empty"><span class="ic">○</span>Нет записей перестирки за месяц</div>`;
-  } else {
-    sorted.slice(0,40).forEach(r=>{
-      const pname = state.points.find(p=>p.id===r.pid)?.name||r.pid;
-      const row = document.createElement('div');
-      row.className = 'entry-row';
-      row.innerHTML = `<span class="ed">${fmtDate(r.date)}</span><span class="ek">${pname} · ${r.kg} кг</span><span class="ep">${rub(r.rub)}</span>`;
-      rh.appendChild(row);
-    });
+  if(isAdmin){
+    const ri=el.querySelector('#rItems');
+    state.restirkaItems.forEach(it=>{ const r=document.createElement('div'); r.className='item-grid'; r.innerHTML=`<span class="iname">${it.name} <span style="color:var(--text-faint)">(${it.weight}г)</span></span><input type="number" data-item="${it.id}" placeholder="0" min="0">`; ri.appendChild(r); });
+    el.querySelector('#rAddBtn').onclick=async()=>{
+      const pid=el.querySelector('#rPt').value;
+      const date=el.querySelector('#rDate').value||todayStr();
+      const qty={}; let kg=0;
+      el.querySelectorAll('[data-item]').forEach(inp=>{ const n=parseInt(inp.value)||0; if(n>0){ qty[inp.dataset.item]=n; const it=state.restirkaItems.find(x=>x.id===inp.dataset.item); kg+=n*(it.weight/1000); }});
+      if(!Object.keys(qty).length){ showToast('Укажи позиции'); return; }
+      await addRestirka(pid,{date,qty,kg:fmt(kg),rub:fmt(kg*state.restirkaTariff)});
+      showToast('Добавлено'); render();
+    };
   }
+  const rh=el.querySelector('#rHist');
+  const sorted=allM.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!sorted.length){ rh.innerHTML=`<div class="empty"><span class="ic">○</span>Нет записей</div>`; return; }
+  sorted.slice(0,40).forEach(r=>{
+    const pname=state.points.find(p=>p.id===r.pid)?.name||r.pid;
+    const row=document.createElement('div'); row.className='entry-row';
+    row.innerHTML=`<span class="ed">${fmtDate(r.date)}</span><span class="ek">${pname} · ${r.kg} кг</span><span class="ep">${rub(r.rub)}</span>`;
+    rh.appendChild(row);
+  });
 }
 
+// ── Expenses ──
 function renderExpenses(el){
-  const mk = thisMonthKey();
-  const monthExp = state.expenses.filter(e=>monthKey(e.date)===mk);
-  const total = monthExp.reduce((s,e)=>s+(e.amount||0),0);
-  const byCat = {};
+  if(!isAdmin){ el.innerHTML=`<div class="empty"><span class="ic">🔒</span>Только для администратора</div>`; return; }
+  const mk=thisMonth();
+  const mExp=state.expenses.filter(e=>monthKey(e.date)===mk);
+  const total=mExp.reduce((s,e)=>s+(e.amount||0),0);
+  const byCat={};
   state.expenseCategories.forEach(c=>byCat[c]=0);
-  monthExp.forEach(e=>byCat[e.category]=(byCat[e.category]||0)+(e.amount||0));
-
-  el.innerHTML = `
+  mExp.forEach(e=>byCat[e.category]=(byCat[e.category]||0)+(e.amount||0));
+  el.innerHTML=`
     <div class="stat" style="margin-bottom:14px;"><div class="label">Расходы за месяц</div><div class="val amber">${rub(total)}</div></div>
     <div class="card">
-      <label class="f"><span class="flabel">Дата</span><input type="date" id="eDate" value="${todayStr()}"></label>
-      <label class="f"><span class="flabel">Категория</span>
-        <select id="eCat">${state.expenseCategories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
-      </label>
-      <label class="f"><span class="flabel">Сумма, ₽</span><input type="number" id="eAmt" placeholder="0" step="1"></label>
-      <label class="f"><span class="flabel">Заметка</span><input type="text" id="eNote" placeholder="необязательно"></label>
-      <button class="btn btn-primary btn-block" id="eAddBtn">Добавить</button>
+      <label class="f"><span class="flabel">Дата</span><input type="date" id="exDate" value="${todayStr()}"></label>
+      <label class="f"><span class="flabel">Категория</span><select id="exCat">${state.expenseCategories.map(c=>`<option>${c}</option>`).join('')}</select></label>
+      <label class="f"><span class="flabel">Сумма, ₽</span><input type="number" id="exAmt" placeholder="0"></label>
+      <label class="f"><span class="flabel">Заметка</span><input type="text" id="exNote" placeholder="необязательно"></label>
+      <button class="btn btn-primary btn-block" id="exAddBtn">Добавить</button>
     </div>
-    <div class="section-title">По категориям, месяц</div>
-    <div class="card" id="eCatCard" style="padding:6px 14px;"></div>
+    <div class="section-title">По категориям</div>
+    <div class="card" id="exCats" style="padding:6px 14px;"></div>
     <div class="section-title">Последние</div>
-    <div class="card" id="eHistory" style="padding:6px 14px;"></div>
+    <div class="card" id="exHist" style="padding:6px 14px;"></div>
   `;
-  el.querySelector('#eAddBtn').addEventListener('click', ()=>{
-    const date = el.querySelector('#eDate').value || todayStr();
-    const category = el.querySelector('#eCat').value;
-    const amount = parseFloat(el.querySelector('#eAmt').value);
-    const note = el.querySelector('#eNote').value.trim();
-    if(!amount){ showToast('Укажи сумму'); return; }
-    state.expenses.push({date, category, amount, note});
-    saveState(); showToast('Добавлено'); render();
+  el.querySelector('#exAddBtn').onclick=async()=>{
+    const amount=parseFloat(el.querySelector('#exAmt').value);
+    if(!amount){ showToast('Введи сумму'); return; }
+    await addExpense({date:el.querySelector('#exDate').value||todayStr(),category:el.querySelector('#exCat').value,amount,note:el.querySelector('#exNote').value.trim()});
+    showToast('Добавлено'); render();
+  };
+  const cc=el.querySelector('#exCats'); let any=false;
+  state.expenseCategories.forEach(c=>{ if(byCat[c]>0){ any=true; const r=document.createElement('div'); r.className='entry-row'; r.innerHTML=`<span class="ek">${c}</span><span class="ep">${rub(byCat[c])}</span>`; cc.appendChild(r); }});
+  if(!any) cc.innerHTML=`<div class="empty" style="padding:16px;"><span class="ic" style="font-size:18px;">○</span>Нет данных</div>`;
+  const eh=el.querySelector('#exHist');
+  const sorted=mExp.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!sorted.length){ eh.innerHTML=`<div class="empty"><span class="ic">○</span>Нет записей</div>`; return; }
+  sorted.slice(0,40).forEach(e=>{
+    const r=document.createElement('div'); r.className='entry-row';
+    r.innerHTML=`<span class="ed">${fmtDate(e.date)}</span><span class="ek">${e.category}${e.note?' · '+e.note:''}</span><span class="ep">${rub(e.amount)}</span><span class="edel" data-eid="${e.id}">✕</span>`;
+    r.querySelector('[data-eid]').onclick=async()=>{ await delExpense(e.id); render(); };
+    eh.appendChild(r);
   });
-
-  const cc = el.querySelector('#eCatCard');
-  let any=false;
-  state.expenseCategories.forEach(c=>{
-    if(byCat[c]>0){ any=true;
-      const row=document.createElement('div'); row.className='entry-row';
-      row.innerHTML=`<span class="ek" style="flex:none;width:auto;">${c}</span><span class="ep" style="flex:1;">${rub(byCat[c])}</span>`;
-      cc.appendChild(row);
-    }
-  });
-  if(!any) cc.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет данных</div>`;
-
-  const eh = el.querySelector('#eHistory');
-  const sorted = monthExp.slice().sort((a,b)=>b.date.localeCompare(a.date));
-  if(!sorted.length){
-    eh.innerHTML = `<div class="empty"><span class="ic">○</span>Нет записей за месяц</div>`;
-  } else {
-    sorted.slice(0,40).forEach(e=>{
-      const realIdx = state.expenses.indexOf(e);
-      const row = document.createElement('div'); row.className='entry-row';
-      row.innerHTML = `<span class="ed">${fmtDate(e.date)}</span><span class="ek">${e.category}${e.note?' · '+e.note:''}</span><span class="ep">${rub(e.amount)}</span><span class="edel" data-idx="${realIdx}">✕</span>`;
-      row.querySelector('.edel').addEventListener('click', ()=>{ state.expenses.splice(realIdx,1); saveState(); render(); });
-      eh.appendChild(row);
-    });
-  }
 }
 
+// ── Driver ──
 function renderDriver(el){
-  const sorted = state.driverNotes.slice().sort((a,b)=>b.date.localeCompare(a.date));
-  const mk = thisMonthKey();
-  const totalKm = sorted.filter(d=>monthKey(d.date)===mk).reduce((s,d)=>s+(d.km||0),0);
-  el.innerHTML = `
-    <div class="stat" style="margin-bottom:14px;"><div class="label">Км за месяц</div><div class="val steam">${fmt(totalKm)}</div></div>
+  const mk=thisMonth();
+  const tKm=state.driverNotes.filter(d=>monthKey(d.date)===mk).reduce((s,d)=>s+(d.km||0),0);
+  const sorted=state.driverNotes.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML=`
+    <div class="stat" style="margin-bottom:14px;"><div class="label">Км за месяц</div><div class="val steam">${fmt(tKm)}</div></div>
+    ${isAdmin?`
     <div class="card">
-      <div class="hint">Раздел в разработке. Пришлёшь список адресов по точкам — добавлю автоматический расчёт км и привязку к каждому ресторану.</div>
+      <div class="hint">Пришли список адресов — добавлю автоматический расчёт км.</div>
       <label class="f"><span class="flabel">Дата</span><input type="date" id="dDate" value="${todayStr()}"></label>
-      <label class="f"><span class="flabel">Откуда</span><input type="text" id="dFrom" placeholder="адрес отправления"></label>
-      <label class="f"><span class="flabel">Куда</span><input type="text" id="dTo" placeholder="адрес назначения"></label>
+      <label class="f"><span class="flabel">Откуда</span><input type="text" id="dFrom" placeholder="адрес"></label>
+      <label class="f"><span class="flabel">Куда</span><input type="text" id="dTo" placeholder="адрес"></label>
       <label class="f"><span class="flabel">Км</span><input type="number" id="dKm" placeholder="0" step="0.1"></label>
       <label class="f"><span class="flabel">Заметка</span><input type="text" id="dNote" placeholder="необязательно"></label>
       <button class="btn btn-primary btn-block" id="dAddBtn">Добавить маршрут</button>
-    </div>
+    </div>`:''}
     <div class="section-title">Маршруты</div>
-    <div class="card" id="dHistory" style="padding:6px 14px;"></div>
+    <div class="card" id="dHist" style="padding:6px 14px;"></div>
   `;
-  el.querySelector('#dAddBtn').addEventListener('click', ()=>{
-    const date = el.querySelector('#dDate').value || todayStr();
-    const from = el.querySelector('#dFrom').value.trim();
-    const to = el.querySelector('#dTo').value.trim();
-    const km = parseFloat(el.querySelector('#dKm').value);
-    const note = el.querySelector('#dNote').value.trim();
-    if(!from || !to || !km){ showToast('Заполни откуда, куда и км'); return; }
-    state.driverNotes.push({date, from, to, km, note});
-    saveState(); showToast('Маршрут добавлен'); render();
-  });
-  const dh = el.querySelector('#dHistory');
-  if(!sorted.length){
-    dh.innerHTML = `<div class="empty"><span class="ic">○</span>Пока нет маршрутов</div>`;
-  } else {
-    sorted.slice(0,40).forEach(d=>{
-      const realIdx = state.driverNotes.indexOf(d);
-      const row = document.createElement('div'); row.className='entry-row';
-      row.innerHTML = `<span class="ed">${fmtDate(d.date)}</span><span class="ek">${d.from} → ${d.to}</span><span class="ep">${fmt(d.km)} км</span><span class="edel" data-idx="${realIdx}">✕</span>`;
-      row.querySelector('.edel').addEventListener('click', ()=>{ state.driverNotes.splice(realIdx,1); saveState(); render(); });
-      dh.appendChild(row);
-    });
-  }
-}
-
-loadState();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  if(isAdmin) el.querySelector('#dAddBtn').onclick=async()=>{
+    const from=el.querySelector('#dFrom').value.trim(), to=el.querySelector('#dTo').value.trim(), km=parseFloat(el.querySelector('#dKm').value);
+    if(!from||!to||!km){ showToast('Заполни поля'); return; }
+    await addDriver({date:el.querySelector('#dDate').value||todayStr(),from,to,km,note:el.querySelector('#dNote').value.trim()});
+    showToast('Добавлено'); render();
+  };
+  const dh=el.querySelector('#dHist');
+  if(!sorted.length){ dh.innerHTML=`<div class="empty"><span class="ic">○</span>Нет маршрутов</div>`; return; }
+  sorted.slice(0,40).forEach(d=>{
+    const r=document.createElement('div'); r.className='entry-row';
+    r.innerHTML=`<span class="ed">${fmtDate(d.date)}</span><span class="ek">${d.from} → ${d.to}</span><span class="ep">${fmt(d.km)} км</span>${isAdmin?`<span class="edel" data-did="${d.id}">✕</span>`:''}`;
+    if(isAdmin) r.querySelector('[data-did]').onclick=async()=>{ await delDriver(d.id); render(); };
+    dh.appendChild(r);
   });
 }
 
-// ─── Settings ─────────────────────────────────────────────────
-
+// ── Settings ──
 function renderSettings(el){
-  if(!isAdmin){ el.innerHTML=`<div class="empty"><span class="ic">🔒</span>Раздел доступен только администратору</div>`; return; }
-  el.innerHTML = `
-    <div class="section-title">Управление точками</div>
+  if(!isAdmin){ el.innerHTML=`<div class="empty"><span class="ic">🔒</span>Только для администратора</div>`; return; }
+  el.innerHTML=`
+    <div class="section-title">Точки</div>
     <div id="settingsList"></div>
     <div class="card">
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text)">Добавить новую точку</div>
-      <label class="f"><span class="flabel">Название</span><input type="text" id="newPName" placeholder="Название точки"></label>
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;">Добавить точку</div>
+      <label class="f"><span class="flabel">Название</span><input type="text" id="newPName" placeholder="Название"></label>
       <label class="f"><span class="flabel">Адрес</span><input type="text" id="newPAddr" placeholder="ул. Пример, 1"></label>
-      <div class="seg" id="newPriceSeg">
-        <div data-pt="perkg" class="active">За кг</div>
-        <div data-pt="abonement">Абонемент</div>
-      </div>
-      <label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="newPTariff" placeholder="100" step="1"></label>
-      <button class="btn btn-primary btn-block" id="addPointBtn">Добавить точку</button>
-    </div>
-
-    <div class="section-title">Доступ · PIN-код</div>
-    <div class="card">
-      <div class="hint">${state.adminPin ? 'PIN установлен. При открытии сайта другие увидят только дашборд и точки (без редактирования).' : 'PIN не задан — все могут редактировать. Задай PIN чтобы ограничить доступ.'}</div>
-      <label class="f"><span class="flabel">${state.adminPin ? 'Новый PIN (оставь пустым чтобы убрать защиту)' : 'Задать PIN'}</span>
-        <input type="password" id="newPin" placeholder="4+ цифры" inputmode="numeric" maxlength="10">
-      </label>
-      ${state.adminPin ? `<label class="f"><span class="flabel">Текущий PIN (подтверждение)</span><input type="password" id="curPin" placeholder="текущий PIN" inputmode="numeric"></label>` : ''}
-      <button class="btn btn-primary btn-block" id="savePinBtn">${state.adminPin ? 'Обновить PIN' : 'Установить PIN'}</button>
+      <div class="seg" id="newSeg"><div data-pt="perkg" class="active">За кг</div><div data-pt="abonement">Абонемент</div></div>
+      <label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="newTariff" placeholder="100"></label>
+      <button class="btn btn-primary btn-block" id="addPtBtn">Добавить точку</button>
     </div>
   `;
-  el.querySelector('#savePinBtn').addEventListener('click',()=>{
-    const newPin = el.querySelector('#newPin').value.trim();
-    const curPinEl = el.querySelector('#curPin');
-    if(state.adminPin && curPinEl){
-      if(curPinEl.value.trim() !== state.adminPin){ showToast('Текущий PIN неверный'); return; }
-    }
-    if(newPin && newPin.length < 4){ showToast('PIN должен быть не менее 4 цифр'); return; }
-    state.adminPin = newPin;
-    if(!newPin) isAdmin = true; // removed pin = open mode
-    saveState(); showToast(newPin ? 'PIN установлен' : 'PIN убран'); render();
-  });
-
-  let newPricingType = 'perkg';
-  el.querySelectorAll('#newPriceSeg div').forEach(d=>d.addEventListener('click',()=>{
-    newPricingType=d.dataset.pt;
-    el.querySelectorAll('#newPriceSeg div').forEach(x=>x.classList.toggle('active',x===d));
-  }));
-
-  const sl = el.querySelector('#settingsList');
+  let npt='perkg';
+  el.querySelectorAll('#newSeg div').forEach(d=>d.onclick=()=>{ npt=d.dataset.pt; el.querySelectorAll('#newSeg div').forEach(x=>x.classList.toggle('active',x===d)); });
+  el.querySelector('#addPtBtn').onclick=async()=>{
+    const name=el.querySelector('#newPName').value.trim();
+    if(!name){ showToast('Введи название'); return; }
+    const pt={id:'pt_'+Date.now(),name,address:el.querySelector('#newPAddr').value.trim(),pricingType:npt,tariff:parseFloat(el.querySelector('#newTariff').value)||100,abonementFee:0,capKg:0,items:[]};
+    state.points.push(pt); await savePoints(); showToast('Добавлено'); render();
+  };
+  const sl=el.querySelector('#settingsList');
   state.points.forEach((p,i)=>{
-    const card = document.createElement('div');
-    card.className = 'point-card';
-    card.innerHTML = `
-      <div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div>
-      <div style="flex:1;min-width:0;">
-        <div class="pname">${p.name}</div>
-        <div class="pmeta">${p.address||'адрес не указан'} · ${p.items.length} позиций</div>
-      </div>
-      <div class="chev">›</div>
-    `;
-    card.addEventListener('click',()=>{ view.settingPointId=p.id; render(); });
-    sl.appendChild(card);
-  });
-
-  el.querySelector('#addPointBtn').addEventListener('click',()=>{
-    const name = el.querySelector('#newPName').value.trim();
-    const address = el.querySelector('#newPAddr').value.trim();
-    const tariff = parseFloat(el.querySelector('#newPTariff').value)||100;
-    if(!name){ showToast('Введи название точки'); return; }
-    const id = 'point_'+Date.now();
-    state.points.push({id, name, address, pricingType:newPricingType, tariff, abonementFee:0, capKg:0, items:[]});
-    saveState(); showToast('Точка добавлена'); render();
+    const c=document.createElement('div'); c.className='point-card';
+    c.innerHTML=`<div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div><div style="flex:1;min-width:0;"><div class="pname">${p.name}</div><div class="pmeta">${p.address||'адрес не указан'} · ${p.items.length} поз.</div></div><div class="chev">›</div>`;
+    c.onclick=()=>{ currentView.settingPointId=p.id; render(); };
+    sl.appendChild(c);
   });
 }
 
 function renderSettingsPoint(el){
-  const p = state.points.find(x=>x.id===view.settingPointId);
-  const idx = state.points.indexOf(p);
-  el.innerHTML = `
+  const p=state.points.find(x=>x.id===currentView.settingPointId);
+  el.innerHTML=`
     <div class="back-row"><span class="back-btn" id="spBack">‹ Настройки</span></div>
     <div class="card">
       <label class="f"><span class="flabel">Название</span><input type="text" id="spName" value="${p.name}"></label>
       <label class="f"><span class="flabel">Адрес</span><input type="text" id="spAddr" value="${p.address||''}"></label>
-      <div class="seg">
-        <div data-pt="perkg" class="${p.pricingType==='perkg'?'active':''}">За кг</div>
-        <div data-pt="abonement" class="${p.pricingType==='abonement'?'active':''}">Абонемент</div>
-      </div>
+      <div class="seg"><div data-pt="perkg" class="${p.pricingType==='perkg'?'active':''}">За кг</div><div data-pt="abonement" class="${p.pricingType==='abonement'?'active':''}">Абонемент</div></div>
       <label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="spTariff" value="${p.tariff}"></label>
-      ${p.pricingType==='abonement'?`
-      <label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="spFee" value="${p.abonementFee}"></label>
-      <label class="f"><span class="flabel">Лимит, кг/мес</span><input type="number" id="spCap" value="${p.capKg}"></label>
-      `:''}
-      <button class="btn btn-primary btn-block" id="spSaveBtn" style="margin-bottom:8px;">Сохранить изменения</button>
-      <button class="btn btn-block" id="spDelBtn" style="color:var(--red);border-color:var(--red);">Удалить точку</button>
+      ${p.pricingType==='abonement'?`<label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="spFee" value="${p.abonementFee}"></label><label class="f"><span class="flabel">Лимит, кг/мес</span><input type="number" id="spCap" value="${p.capKg}"></label>`:''}
+      <button class="btn btn-primary btn-block" id="spSave" style="margin-bottom:8px;">Сохранить</button>
+      <button class="btn btn-block" id="spDel" style="color:var(--red);border-color:var(--red);">Удалить точку</button>
     </div>
-
-    <div class="section-title">Позиции и штучные цены</div>
-    <div class="card" id="spItemsCard">
-      <div id="spItemsList"></div>
-      <div style="margin-top:10px; font-size:11.5px; color:var(--text-faint); margin-bottom:8px;">Добавить позицию:</div>
-      <div class="addrow" style="margin-bottom:8px;">
-        <input type="text" id="spNewItem" placeholder="Название позиции" style="flex:1;">
+    <div class="section-title">Позиции и цены (₽/шт)</div>
+    <div class="card"><div id="spItemsList"></div>
+      <div class="addrow" style="margin-top:8px;">
+        <input type="text" id="spNewItem" placeholder="Название позиции">
         <input type="number" id="spNewPrice" placeholder="₽/шт" style="width:70px;flex:none;">
-        <button class="btn btn-sm" id="spAddItemBtn">+</button>
+        <button class="btn btn-sm" id="spAddItem">+</button>
       </div>
     </div>
   `;
-  el.querySelector('#spBack').addEventListener('click',()=>{ view.settingPointId=null; render(); });
-  el.querySelectorAll('.seg div').forEach(d=>d.addEventListener('click',()=>{ p.pricingType=d.dataset.pt; saveState(); render(); }));
-
-  function bindSave(){
-    el.querySelector('#spSaveBtn').addEventListener('click',()=>{
-      p.name = el.querySelector('#spName').value.trim()||p.name;
-      p.address = el.querySelector('#spAddr').value.trim();
-      p.tariff = parseFloat(el.querySelector('#spTariff').value)||p.tariff;
-      if(el.querySelector('#spFee')) p.abonementFee = parseFloat(el.querySelector('#spFee').value)||0;
-      if(el.querySelector('#spCap')) p.capKg = parseFloat(el.querySelector('#spCap').value)||0;
-      saveState(); showToast('Сохранено'); render();
-    });
-    el.querySelector('#spDelBtn').addEventListener('click',()=>{
-      if(!confirm('Удалить точку "'+p.name+'"? Все данные по ней останутся, но точка исчезнет из списка.')) return;
-      state.points.splice(idx,1);
-      saveState(); view.settingPointId=null; render();
-    });
-  }
-  bindSave();
-
-  function renderSpItems(){
-    const sl = el.querySelector('#spItemsList');
-    sl.innerHTML='';
+  el.querySelector('#spBack').onclick=()=>{ currentView.settingPointId=null; render(); };
+  el.querySelectorAll('.seg div').forEach(d=>d.onclick=()=>{ p.pricingType=d.dataset.pt; savePoints(); render(); });
+  el.querySelector('#spSave').onclick=async()=>{
+    p.name=el.querySelector('#spName').value.trim()||p.name;
+    p.address=el.querySelector('#spAddr').value.trim();
+    p.tariff=parseFloat(el.querySelector('#spTariff').value)||p.tariff;
+    if(el.querySelector('#spFee')) p.abonementFee=parseFloat(el.querySelector('#spFee').value)||0;
+    if(el.querySelector('#spCap')) p.capKg=parseFloat(el.querySelector('#spCap').value)||0;
+    await savePoints(); showToast('Сохранено'); render();
+  };
+  el.querySelector('#spDel').onclick=async()=>{
+    if(!confirm(`Удалить точку "${p.name}"?`)) return;
+    state.points=state.points.filter(x=>x.id!==p.id);
+    await savePoints(); currentView.settingPointId=null; render();
+  };
+  const renderItems=()=>{
+    const sl=el.querySelector('#spItemsList'); sl.innerHTML='';
     p.items.forEach((it,ii)=>{
-      const row = document.createElement('div');
-      row.style.cssText='display:grid;grid-template-columns:1fr 80px 30px;gap:6px;align-items:center;margin-bottom:6px;';
-      row.innerHTML=`
-        <span style="font-size:13px;color:var(--text-dim);">${it.name}</span>
-        <input type="number" placeholder="₽/шт" value="${it.pricePerUnit||''}" style="padding:6px 8px;font-size:13px;" data-iidx="${ii}">
-        <span style="color:var(--text-faint);cursor:pointer;font-size:15px;text-align:center;" data-del="${ii}">✕</span>
-      `;
-      row.querySelector('input').addEventListener('change',e=>{ p.items[ii].pricePerUnit=parseFloat(e.target.value)||0; saveState(); });
-      row.querySelector('[data-del]').addEventListener('click',()=>{ p.items.splice(ii,1); saveState(); renderSpItems(); });
-      sl.appendChild(row);
+      const r=document.createElement('div');
+      r.style.cssText='display:grid;grid-template-columns:1fr 80px 28px;gap:6px;align-items:center;margin-bottom:6px;';
+      r.innerHTML=`<span style="font-size:13px;color:var(--text-dim);">${it.name}</span><input type="number" placeholder="₽/шт" value="${it.pricePerUnit||''}" style="padding:6px 8px;font-size:13px;"><span style="color:var(--text-faint);cursor:pointer;text-align:center;" data-del="${ii}">✕</span>`;
+      r.querySelector('input').onchange=e=>{ p.items[ii].pricePerUnit=parseFloat(e.target.value)||0; savePoints(); };
+      r.querySelector('[data-del]').onclick=()=>{ p.items.splice(ii,1); savePoints(); renderItems(); };
+      sl.appendChild(r);
     });
-  }
-  renderSpItems();
-  el.querySelector('#spAddItemBtn').addEventListener('click',()=>{
-    const name=el.querySelector('#spNewItem').value.trim();
-    const price=parseFloat(el.querySelector('#spNewPrice').value)||0;
+  };
+  renderItems();
+  el.querySelector('#spAddItem').onclick=()=>{
+    const name=el.querySelector('#spNewItem').value.trim(), price=parseFloat(el.querySelector('#spNewPrice').value)||0;
     if(!name){ showToast('Введи название'); return; }
-    const id=name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
-    p.items.push({id,name,pricePerUnit:price});
-    el.querySelector('#spNewItem').value='';
-    el.querySelector('#spNewPrice').value='';
-    saveState(); renderSpItems();
-  });
+    p.items.push({id:name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now(),name,pricePerUnit:price});
+    el.querySelector('#spNewItem').value=''; el.querySelector('#spNewPrice').value='';
+    savePoints(); renderItems();
+  };
 }
 
-// ─── Excel Export ────────────────────────────────────────────────
-
-const MONTH_NAMES_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-
-function getDayName(dateStr){
-  return DAY_NAMES[new Date(dateStr).getDay()];
-}
-
-function buildPointSheetData(p){
-  const allEntries = pointEntries(p.id);
-  const allRestirka = restirkaEntries(p.id);
-  const allDates = [...new Set([...allEntries.map(e=>e.date), ...allRestirka.map(r=>r.date)])].sort();
-  if(!allDates.length) return null;
-
-  const months = [...new Set(allDates.map(d=>monthKey(d)))].sort();
-  const wb = XLSX.utils.book_new();
-
-  months.forEach(mk=>{
-    const [yr, mo] = mk.split('-');
-    const moInt = parseInt(mo);
-    const moName = MONTH_NAMES_RU[moInt-1];
-    const daysInMonth = new Date(parseInt(yr), moInt, 0).getDate();
-
-    const mEntries = allEntries.filter(e=>monthKey(e.date)===mk);
-    const mRest = allRestirka.filter(r=>monthKey(r.date)===mk);
-
-    // Build lookup by day
-    const byDay = {};
-    for(let d=1;d<=daysInMonth;d++) byDay[d]={kg:0, items:{}, restKg:0, restRub:0, note:'', rubMain:0, rubShtuch:0};
-    mEntries.forEach(e=>{
-      const day = parseInt(e.date.split('-')[2]);
-      byDay[day].kg += e.kg||0;
-      byDay[day].note = e.note||'';
-      if(e.items) Object.entries(e.items).forEach(([iid,n])=>{ byDay[day].items[iid]=(byDay[day].items[iid]||0)+n; });
-    });
-    mRest.forEach(r=>{
-      const day = parseInt(r.date.split('-')[2]);
-      byDay[day].restKg += r.kg||0;
-      byDay[day].restRub += r.rub||0;
-    });
-
-    // Calculate money per day
-    let totalKg=0, totalShtuch=0, totalNadb=0, totalRub=0, totalDays=0, totalEd=0;
-    let totalRestKg=0, totalRestRub=0;
-    for(let d=1;d<=daysInMonth;d++){
-      const row = byDay[d];
-      if(row.kg>0 || Object.keys(row.items).length) totalDays++;
-      totalKg += row.kg;
-      totalRestKg += row.restKg;
-      totalRestRub += row.restRub;
-      // штучные
-      let dayEd=0, dayShtuch=0;
-      p.items.forEach(it=>{
-        const qty = row.items[it.id]||0;
-        dayEd += qty;
-        if(it.pricePerUnit>0) dayShtuch += qty*it.pricePerUnit;
-      });
-      totalEd += dayEd;
-      totalShtuch += dayShtuch;
-      row.rubShtuch = dayShtuch;
-      // стирка
-      const dayRubMain = p.pricingType==='perkg' ? row.kg*p.tariff : 0;
-      row.rubMain = dayRubMain;
-      totalRub += dayRubMain + dayShtuch;
+// ─── Excel Export ─────────────────────────────────────────────────
+function buildYearlyWb(p, year){
+  if(typeof XLSX==='undefined'){ showToast('Нет соединения для экспорта'); return null; }
+  const wb=XLSX.utils.book_new(); const yr=year||new Date().getFullYear();
+  const summary=[];
+  for(let mo=1;mo<=12;mo++){
+    const mk=`${yr}-${String(mo).padStart(2,'0')}`;
+    const moName=MONTH_NAMES[mo-1]; const numDays=daysInMonth(yr,mo);
+    const mE=pointEntries(p.id).filter(e=>monthKey(e.date)===mk);
+    const mR=pointRestirka(p.id).filter(r=>monthKey(r.date)===mk);
+    const byDay={};
+    for(let d=1;d<=numDays;d++) byDay[d]={kg:0,items:{},restKg:0,restRub:0,note:'',_sh:0};
+    mE.forEach(e=>{ const d=parseInt(e.date.split('-')[2]); byDay[d].kg+=e.kg||0; if(e.note) byDay[d].note=e.note; Object.entries(e.items||{}).forEach(([iid,n])=>{ byDay[d].items[iid]=(byDay[d].items[iid]||0)+n; }); });
+    mR.forEach(r=>{ const d=parseInt(r.date.split('-')[2]); byDay[d].restKg+=r.kg||0; byDay[d].restRub+=r.rub||0; });
+    let tKg=0,tEd=0,tSh=0,tDays=0,tRest=0,tRestRub=0; const iT={};
+    p.items.forEach(it=>iT[it.id]=0);
+    for(let d=1;d<=numDays;d++){
+      const row=byDay[d]; if(row.kg>0||Object.keys(row.items).length) tDays++;
+      tKg+=row.kg; tRest+=row.restKg; tRestRub+=row.restRub;
+      let sh=0; p.items.forEach(it=>{ const n=row.items[it.id]||0; iT[it.id]+=n; tEd+=n; if(it.pricePerUnit>0) sh+=n*it.pricePerUnit; }); tSh+=sh; row._sh=sh;
     }
-    if(p.pricingType==='abonement'){
-      const overKg = Math.max(0, totalKg - p.capKg);
-      totalRub = p.abonementFee + overKg*p.tariff + totalShtuch;
-    }
-
-    // Build sheet rows like original
-    const rows = [];
-    // Row 1: title
-    rows.push([null, `${p.name.toUpperCase()} · ${moName.toUpperCase()} ${yr}`]);
-    // Row 2: subtitle
-    rows.push([null, `${p.name} · Учёт стирки за ${moName.toLowerCase()} ${yr}`]);
+    let tMainRub=p.pricingType==='abonement'?p.abonementFee+Math.max(0,tKg-p.capKg)*p.tariff:Math.round(tKg*p.tariff);
+    const tRub=tMainRub+tSh+tRestRub;
+    summary.push({mo,moName,tDays,tKg:fmt(tKg),tRest:fmt(tRest),tEd,tMainRub,tSh,tRestRub,tRub});
+    const rows=[];
+    rows.push([null,`${p.name.toUpperCase()} · ${moName.toUpperCase()} ${yr}`]);
+    rows.push([null,`${p.name} · Учёт стирки за ${moName.toLowerCase()} ${yr}`]);
     rows.push([]);
-    // Row 4: summary headers
-    rows.push([null, 'ВЕС, КГ', null, null, null, null, 'ЕДИНИЦ', null, null, null, null, 'ДНЕЙ СТИРКИ', null, null, null, null, 'К ОПЛАТЕ, ₽']);
-    // Row 5: summary values
-    rows.push([null, fmt(totalKg+totalRestKg), null, null, null, null, totalEd, null, null, null, null, totalDays, null, null, null, null, Math.round(totalRub+totalRestRub)]);
+    rows.push([null,'ВЕС, КГ',null,null,null,null,'ЕДИНИЦ',null,null,null,null,'ДНЕЙ',null,null,null,null,'К ОПЛАТЕ, ₽']);
+    rows.push([null,fmt(tKg+tRest),null,null,null,null,tEd,null,null,null,null,tDays,null,null,null,null,tRub]);
     rows.push([]);
-    // Row 7: column headers
-    const itemNames = p.items.map(it=>it.name);
-    rows.push([null,'День','ДН','Вес, кг','Всего ед.',...itemNames,'Перест.,кг','Заметки','Стирка,₽','Штучные,₽','Надбавки,₽','Доставка,₽','К оплате,₽']);
-
-    // Day rows
-    const itemTotals = {};
-    p.items.forEach(it=>itemTotals[it.id]=0);
-    for(let d=1;d<=daysInMonth;d++){
-      const row = byDay[d];
-      const dateStr = `${yr}-${mo}-${String(d).padStart(2,'0')}`;
-      const dn = getDayName(dateStr);
-      const ed = p.items.reduce((s,it)=>s+(row.items[it.id]||0),0);
-      const itemCols = p.items.map(it=>{ const n=row.items[it.id]||0; itemTotals[it.id]+=n; return n||null; });
-      const kToPlate = row.rubMain + row.rubShtuch + row.restRub;
-      rows.push([null, d, dn, row.kg||null, ed||null, ...itemCols,
-        row.restKg||null, row.note||null,
-        row.rubMain||null, row.rubShtuch||null, null, null,
-        kToPlate||null]);
+    rows.push([null,p.pricingType==='abonement'?`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг), сверх: ${p.tariff} ₽/кг`:`Тариф: ${p.tariff} ₽/кг`]);
+    rows.push([]);
+    rows.push([null,'День','ДН','Вес, кг','Всего ед.',...p.items.map(it=>it.name),'Перест.,кг','Заметки','Стирка,₽','Штучные,₽','К оплате,₽']);
+    for(let d=1;d<=numDays;d++){
+      const row=byDay[d]; const ds=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const ed=p.items.reduce((s,it)=>s+(row.items[it.id]||0),0);
+      const mr=p.pricingType==='perkg'&&row.kg>0?Math.round(row.kg*p.tariff):null;
+      const tot=(mr||0)+(row._sh||0)+row.restRub||null;
+      rows.push([null,d,dayOfWeek(ds),row.kg||null,ed||null,...p.items.map(it=>row.items[it.id]||null),row.restKg||null,row.note||null,mr,row._sh||null,tot]);
     }
-
-    // ИТОГО row
-    const itemTotalCols = p.items.map(it=>itemTotals[it.id]||null);
-    rows.push([null,'ИТОГО',null,fmt(totalKg),totalEd||null,...itemTotalCols,
-      fmt(totalRestKg)||null, null,
-      p.pricingType==='perkg'?Math.round(totalKg*p.tariff):p.abonementFee,
-      Math.round(totalShtuch)||null, null, null,
-      Math.round(totalRub+totalRestRub)]);
-
-    // if abonement – explain
-    if(p.pricingType==='abonement'){
-      rows.push([]);
-      rows.push([null, `Абонемент: ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг). Сверх лимита: ${p.tariff} ₽/кг.`]);
+    const iTC=p.items.map(it=>iT[it.id]||null);
+    rows.push([null,'ИТОГО',null,fmt(tKg)||null,tEd||null,...iTC,fmt(tRest)||null,null,tMainRub||null,tSh||null,tRub||null]);
+    if(mR.length){
+      rows.push([],[ null,`ПЕРЕСТИРКА (${state.restirkaTariff} ₽/кг)`]);
+      rows.push([null,'Дата','кг',...state.restirkaItems.map(it=>it.name),'Сумма,₽']);
+      mR.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>rows.push([null,r.date,r.kg,...state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||null),r.rub]));
+      rows.push([null,'Итого',fmt(tRest),...state.restirkaItems.map(()=>null),Math.round(tRestRub)]);
     }
-
-    // Перестирка block if any
-    if(mRest.length){
-      rows.push([]);
-      rows.push([null, `ПЕРЕСТИРКА (тариф ${state.restirkaTariff} ₽/кг)`]);
-      const rHdr = state.restirkaItems.map(it=>it.name+' шт');
-      rows.push([null,'Дата','кг',...rHdr,'Сумма, ₽']);
-      let rTotalKg=0, rTotalRub=0;
-      mRest.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
-        const qCols = state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||null);
-        rows.push([null, r.date, r.kg, ...qCols, r.rub]);
-        rTotalKg+=r.kg; rTotalRub+=r.rub;
-      });
-      rows.push([null,'ИТОГО',fmt(rTotalKg),...state.restirkaItems.map(()=>null),Math.round(rTotalRub)]);
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    // Column widths
-    ws['!cols'] = [
-      {wch:2},{wch:6},{wch:4},{wch:8},{wch:8},
-      ...p.items.map(()=>({wch:10})),
-      {wch:10},{wch:20},{wch:10},{wch:10},{wch:10},{wch:10},{wch:12}
-    ];
-    const sheetName = `${String(moInt).padStart(2,'0')}.${moName.slice(0,3)}`;
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  });
-
-  // Summary sheet
-  const summaryRows = [];
-  summaryRows.push([null, `${p.name} · ГОДОВОЙ ОТЧЁТ`]);
-  summaryRows.push([]);
-  summaryRows.push([null,'Месяц','Дней','Кг (стирка)','Кг (перест.)','Итого кг','Штучных, ₽','К оплате, ₽']);
-  let gKg=0, gRub=0;
-  months.forEach(mk=>{
-    const [yr,mo]=mk.split('-');
-    const t = pointMonthTotals(p.id, mk);
-    const moName = MONTH_NAMES_RU[parseInt(mo)-1];
-    summaryRows.push([null, moName+' '+yr, t.days, t.kgMain, t.kgRestirka, t.kg, null, Math.round(t.rub)]);
-    gKg+=t.kg; gRub+=t.rub;
-  });
-  summaryRows.push([null,'ИТОГО',null,null,null,fmt(gKg),null,Math.round(gRub)]);
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  wsSummary['!cols']=[{wch:2},{wch:16},{wch:6},{wch:12},{wch:12},{wch:10},{wch:12},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Сводка');
-
-  // Дашборд sheet — first, like original
-  const dashRows = [];
-  dashRows.push([null, `${p.name.toUpperCase()} · ГОДОВОЙ УЧЁТ ${new Date().getFullYear()}`]);
-  dashRows.push([]);
-  dashRows.push([null,'Месяц','Дней','Кг (стирка)','Кг (перест.)','Итого кг','Стирка, ₽','Перест., ₽','Итого, ₽','На выезд, ₽']);
-  let gKg=0, gRub=0, gDays=0;
-  months.forEach(mk=>{
-    const [yr2,mo2]=mk.split('-');
-    const t = pointMonthTotals(p.id, mk);
-    const moName2 = MONTH_NAMES_RU[parseInt(mo2)-1];
-    const perDay = t.days>0 ? Math.round(t.rub/t.days) : 0;
-    dashRows.push([null,moName2+' '+yr2, t.days, t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub), perDay]);
-    gKg+=parseFloat(t.kg); gRub+=t.rub; gDays+=t.days;
-  });
-  dashRows.push([null,'ИТОГО ЗА ГОД',gDays,null,null,fmt(gKg),null,null,Math.round(gRub),gDays>0?Math.round(gRub/gDays):0]);
-  dashRows.push([]);
-  if(p.pricingType==='abonement'){
-    dashRows.push([null,'УСЛОВИЯ: Абонемент',p.abonementFee,'₽/мес до',p.capKg,'кг. Сверх:',p.tariff,'₽/кг']);
-  } else {
-    dashRows.push([null,'УСЛОВИЯ: Тариф',p.tariff,'₽/кг']);
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:2},{wch:6},{wch:4},{wch:8},{wch:8},...p.items.map(()=>({wch:10})),{wch:10},{wch:20},{wch:10},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws,`${String(mo).padStart(2,'0')}.${moName.slice(0,3)}`);
   }
-  const wsDash = XLSX.utils.aoa_to_sheet(dashRows);
-  wsDash['!cols']=[{wch:2},{wch:16},{wch:6},{wch:12},{wch:12},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}];
-  XLSX.utils.book_append_sheet(wb, wsDash, '🎯 Дашборд');
-
+  // Summary sheet
+  const srows=[[null,`${p.name} · ГОДОВОЙ ОТЧЁТ ${yr}`],[],[null,'Месяц','Дней','Кг','Перест.кг','Всего кг','Ед.','Стирка,₽','Штуч,₽','Перест,₽','Итого,₽']];
+  let gKg=0,gRub=0;
+  summary.forEach(s=>{ const tot=fmt((parseFloat(s.tKg)||0)+(parseFloat(s.tRest)||0)); srows.push([null,s.moName,s.tDays||null,s.tKg||null,s.tRest||null,tot||null,s.tEd||null,s.tMainRub||null,s.tSh||null,s.tRestRub||null,s.tRub||null]); gKg+=parseFloat(tot)||0; gRub+=s.tRub||0; });
+  srows.push([null,'ИТОГО',null,null,null,fmt(gKg),null,null,null,null,Math.round(gRub)]);
+  const ws2=XLSX.utils.aoa_to_sheet(srows); ws2['!cols']=[{wch:2},{wch:14},{wch:6},{wch:10},{wch:10},{wch:10},{wch:6},{wch:12},{wch:10},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,'📊 Годовая сводка');
   return wb;
 }
 
 function exportPointExcel(pid){
-  const p = state.points.find(x=>x.id===pid);
-  showToast('Формирую годовой Excel...');
-  setTimeout(()=>{
-    const wb = buildPointSheetData(p);
-    if(!wb){ showToast('Нет данных для экспорта'); return; }
-    // Move Сводка to front
-    const sIdx = wb.SheetNames.indexOf('Сводка');
-    if(sIdx>0){ wb.SheetNames.splice(sIdx,1); wb.SheetNames.unshift('Сводка'); }
-    const yr = new Date().getFullYear();
-    const fname = `${p.name.replace(/\s+/g,'_')}_Учет_Годовой_${yr}.xlsx`;
-    XLSX.writeFile(wb, fname);
-    showToast('Готово: ' + fname);
-  }, 50);
+  const p=state.points.find(x=>x.id===pid); if(!p) return;
+  showToast('Формирую Excel...');
+  setTimeout(()=>{ const wb=buildYearlyWb(p,new Date().getFullYear()); if(wb){ XLSX.writeFile(wb,`${p.name.replace(/\s+/g,'_')}_${new Date().getFullYear()}.xlsx`); showToast('Готово!'); } },50);
 }
 
 function exportAllExcel(){
-  showToast('Формирую сводный Excel...');
+  if(typeof XLSX==='undefined'){ showToast('Нет соединения'); return; }
+  showToast('Формирую...');
   setTimeout(()=>{
-    const wb = XLSX.utils.book_new();
-    const mk = thisMonthKey();
-    const [yr, mo] = mk.split('-');
-    const moName = MONTH_NAMES_RU[parseInt(mo)-1];
+    const wb=XLSX.utils.book_new(); const yr=new Date().getFullYear(); const mk=thisMonth();
+    const sr=[[null,`СВОДКА · ${yr}`],[],[null,'Точка','Адрес','Кг','Перест.кг','Итого кг','К оплате,₽']];
+    let gK=0,gR=0;
+    state.points.forEach(p=>{ const t=pointMonthTotals(p.id,mk); sr.push([null,p.name,p.address||'',t.kgMain,t.kgRest,t.kg,Math.round(t.rub)]); gK+=parseFloat(t.kg)||0; gR+=t.rub||0; });
+    sr.push([null,'ИТОГО','','','',fmt(gK),Math.round(gR)]);
+    const ws=XLSX.utils.aoa_to_sheet(sr); ws['!cols']=[{wch:2},{wch:16},{wch:20},{wch:10},{wch:10},{wch:10},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,'Сводка');
+    state.points.forEach(p=>{ const ptWb=buildYearlyWb(p,yr); if(!ptWb) return; ptWb.SheetNames.forEach(sn=>{ const label=(p.name.slice(0,8)+' '+sn).slice(0,31); XLSX.utils.book_append_sheet(wb,ptWb.Sheets[sn],label); }); });
+    XLSX.writeFile(wb,`Прачечная_${yr}.xlsx`); showToast('Готово!');
+  },50);
+}
 
-    // Summary sheet
-    const summaryRows = [
-      [null, `СВОДНЫЙ ОТЧЁТ — ${moName} ${yr}`],
-      [],
-      [null,'Точка','Адрес','Кг (стирка)','Кг (перест.)','Кг итого','Сумма стирка','Сумма перест.','Итого, ₽'],
-    ];
-    let gKg=0, gRub=0;
-    state.points.forEach(p=>{
-      const t = pointMonthTotals(p.id, mk);
-      summaryRows.push([null, p.name, p.address||'', t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub)]);
-      gKg += t.kg; gRub += t.rub;
-    });
-    summaryRows.push([null,'ИТОГО','',null,null,fmt(gKg),null,null,Math.round(gRub)]);
-    summaryRows.push([]);
+// ─── Auth listener & init ──────────────────────────────────────────
+onAuthStateChanged(auth, async(user)=>{
+  isAdmin = !!user;
+  updateTopbar();
+  render();
+});
 
-    // Expenses
-    const monthExp = state.expenses.filter(e=>monthKey(e.date)===mk);
-    if(monthExp.length){
-      summaryRows.push([null,'РАСХОДЫ ПРАЧЕЧНОЙ']);
-      summaryRows.push([null,'Дата','Категория','Сумма, ₽','Заметка']);
-      monthExp.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>summaryRows.push([null,e.date,e.category,e.amount,e.note||'']));
-      summaryRows.push([null,'ИТОГО расходы','',monthExp.reduce((s,e)=>s+e.amount,0)]);
+// Init
+(async()=>{
+  showLoading();
+  try{
+    await loadAllData();
+  } catch(e){
+    console.error(e);
+    showToast('Ошибка загрузки данных');
+  }
+  hideLoading();
+  // Check if logged in already handled by onAuthStateChanged
+  // If no auth state yet, show auth overlay after brief delay
+  setTimeout(()=>{
+    if(!auth.currentUser && document.getElementById('view').innerHTML===''){
+      showAuthOverlay();
     }
+  }, 1500);
+})();
 
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-    wsSummary['!cols']=[{wch:2},{wch:16},{wch:20},{wch:12},{wch:12},{wch:10},{wch:14},{wch:14},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'Сводка');
-
-    // One month-sheet per point
-    state.points.forEach(p=>{
-      const ptWb = buildPointSheetData(p);
-      if(!ptWb) return;
-      ptWb.SheetNames.filter(s=>s!=='Сводка').forEach(sn=>{
-        const label = (p.name.slice(0,10)+' '+sn).slice(0,31);
-        XLSX.utils.book_append_sheet(wb, ptWb.Sheets[sn], label);
-      });
-    });
-
-    const fname = `Прачечная_${mk}.xlsx`;
-    XLSX.writeFile(wb, fname);
-    showToast('Готово: ' + fname);
-  }, 50);
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
 }
 </script>
 </body>
