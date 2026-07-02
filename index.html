@@ -83,7 +83,7 @@
   .entry-row .edel{ color:var(--text-faint); margin-left:4px; cursor:pointer; font-size:16px; }
   .card{ background:var(--panel); border:1px solid var(--line-soft); border-radius:var(--radius); padding:14px; margin-bottom:14px;}
   .tabbar{ position:fixed; bottom:0; left:0; right:0; z-index:30; background:rgba(17,21,26,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line-soft); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); }
-  .tab{ flex:1; text-align:center; padding:6px 2px; cursor:pointer; color:var(--text-faint); font-size:10.5px; font-weight:600; letter-spacing:.01em; }
+  .tab{ flex:1; text-align:center; padding:6px 1px; cursor:pointer; color:var(--text-faint); font-size:9.5px; font-weight:600; letter-spacing:.01em; }
   .tab .ic{ font-size:19px; display:block; margin-bottom:3px; }
   .tab.active{ color:var(--steam); }
   .empty{ text-align:center; padding:36px 10px; color:var(--text-faint); font-size:13.5px; }
@@ -106,7 +106,24 @@
     <div class="mark">Учёт стирки</div>
     <h1 id="topTitle">Дашборд</h1>
   </div>
-  <div class="sub" id="todayDate"></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="sub" id="todayDate"></div>
+    <div id="lockBtn" style="cursor:pointer;font-size:18px;color:var(--text-faint);display:none;" title="Войти как администратор">🔒</div>
+    <div id="unlockBtn" style="cursor:pointer;font-size:13px;color:var(--steam);font-weight:600;display:none;">Выйти</div>
+  </div>
+</div>
+
+<!-- PIN overlay -->
+<div id="pinOverlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="font-size:28px;margin-bottom:8px;">🔒</div>
+  <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Режим просмотра</div>
+  <div style="font-size:13px;color:var(--text-faint);margin-bottom:28px;text-align:center;">Для редактирования введи PIN администратора</div>
+  <input type="password" id="pinInput" placeholder="PIN-код" inputmode="numeric" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:6px;margin-bottom:12px;">
+  <div id="pinError" style="color:var(--red);font-size:13px;min-height:20px;margin-bottom:10px;"></div>
+  <button class="btn btn-primary" style="max-width:200px;width:100%;" id="pinEnterBtn">Войти</button>
+  <div style="margin-top:16px;">
+    <span style="font-size:13px;color:var(--steam);cursor:pointer;" id="pinViewOnlyBtn">Продолжить без входа →</span>
+  </div>
 </div>
 <div class="view" id="view"></div>
 <div class="toast" id="toast"></div>
@@ -116,6 +133,7 @@
   <div class="tab" data-tab="restirka"><span class="ic">&#9851;</span>Перестирка</div>
   <div class="tab" data-tab="expenses"><span class="ic">&#8372;</span>Расходы</div>
   <div class="tab" data-tab="driver"><span class="ic">&#9658;</span>Водитель</div>
+  <div class="tab" data-tab="settings"><span class="ic">&#9881;</span>Настройки</div>
 </div>
 
 <script>
@@ -128,18 +146,21 @@ const ITEMS_TEREMOK = ['Бережковский халаты','Зубовски
 const ITEMS_PADEL = ['Полотенце'];
 const ITEMS_TD = ['Салфетка','Скатерть','Полотенце'];
 
-function mkItems(names){ return names.map(n=>({id: n.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_'), name:n})); }
+function mkItems(names, prices={}){ return names.map(n=>({id: n.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_'), name:n, pricePerUnit: prices[n]||0})); }
+
+// штучные тарифы Моро/Брон/Эмбер/Сарай
+const PRICES_RESTORAN = {'Плед':120,'Куртка повара':220,'Брюки повара':175,'Фартук':90,'Декор.нав.':60,'Чехол на кресло':60,'Сидушка':60,'Шторы':200,'Коврик':150,'Толстовка':80,'Футболка':60};
 
 const DEFAULT_STATE = {
   points: [
-    {id:'saray',   name:'Сарай 1',      pricingType:'abonement', tariff:100, abonementFee:85000, capKg:800, items:mkItems(ITEMS_RESTORAN)},
-    {id:'moro',    name:'Моро',         pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
-    {id:'bron',    name:'Брон',         pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
-    {id:'bruno',   name:'Бруно',        pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_BRUNO)},
-    {id:'amber',   name:'Эмбер',        pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN)},
-    {id:'padel',   name:'Падел',        pricingType:'perkg',     tariff:80,  abonementFee:0, capKg:0, items:mkItems(ITEMS_PADEL)},
-    {id:'teremok', name:'Теремок',      pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_TEREMOK)},
-    {id:'td',      name:'Торговый дом', pricingType:'perkg',     tariff:150, abonementFee:0, capKg:0, items:mkItems(ITEMS_TD)},
+    {id:'saray',   name:'Сарай 1',      address:'', pricingType:'abonement', tariff:100, abonementFee:85000, capKg:800, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
+    {id:'moro',    name:'Моро',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
+    {id:'bron',    name:'Брон',         address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
+    {id:'bruno',   name:'Бруно',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_BRUNO)},
+    {id:'amber',   name:'Эмбер',        address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_RESTORAN, PRICES_RESTORAN)},
+    {id:'padel',   name:'Падел',        address:'', pricingType:'perkg',     tariff:80,  abonementFee:0, capKg:0, items:mkItems(ITEMS_PADEL)},
+    {id:'teremok', name:'Теремок',      address:'', pricingType:'perkg',     tariff:100, abonementFee:0, capKg:0, items:mkItems(ITEMS_TEREMOK)},
+    {id:'td',      name:'Торговый дом', address:'', pricingType:'perkg',     tariff:150, abonementFee:0, capKg:0, items:mkItems(ITEMS_TD)},
   ],
   entries: {},
   restirkaItems: [
@@ -152,10 +173,12 @@ const DEFAULT_STATE = {
   expenses: [],
   expenseCategories: ['Порошок цветной','Порошок белый','Белизна','Пакеты','Прочее'],
   driverNotes: [],
+  adminPin: '',       // empty = no pin set (open edit), non-empty = pin required
 };
 
 let state = null;
 let view = {tab:'dashboard', pointId:null};
+let isAdmin = false; // session only – reset on reload
 
 function loadState(){
   try{
@@ -165,8 +188,18 @@ function loadState(){
     state = structuredClone(DEFAULT_STATE);
   }
   for(const k in DEFAULT_STATE){ if(!(k in state)) state[k] = structuredClone(DEFAULT_STATE[k]); }
-  state.points.forEach(p=>{ if(!p.items) p.items=[]; if(p.pricingType===undefined) p.pricingType='perkg'; if(p.abonementFee===undefined) p.abonementFee=0; if(p.capKg===undefined) p.capKg=0; });
-  render();
+  state.points.forEach(p=>{
+    if(!p.items) p.items=[];
+    if(p.pricingType===undefined) p.pricingType='perkg';
+    if(p.abonementFee===undefined) p.abonementFee=0;
+    if(p.capKg===undefined) p.capKg=0;
+    if(p.address===undefined) p.address='';
+    p.items.forEach(it=>{ if(it.pricePerUnit===undefined) it.pricePerUnit=0; });
+  });
+  // If no PIN set — treat everyone as admin (open mode)
+  if(!state.adminPin) isAdmin = true;
+  if(!isAdmin) showPinOverlay();
+  else render();
 }
 
 function saveState(){
@@ -187,6 +220,57 @@ function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 function thisMonthKey(){ return todayStr().slice(0,7); }
 function fmtDate(d){ const [y,m,day]=d.split('-'); return day+'.'+m; }
+
+function showPinOverlay(){
+  document.getElementById('pinOverlay').style.display='flex';
+  document.getElementById('lockBtn').style.display='none';
+  document.getElementById('unlockBtn').style.display='none';
+}
+
+function hidePinOverlay(){
+  document.getElementById('pinOverlay').style.display='none';
+}
+
+function updateLockUI(){
+  const lb = document.getElementById('lockBtn');
+  const ub = document.getElementById('unlockBtn');
+  if(!state.adminPin){ lb.style.display='none'; ub.style.display='none'; return; }
+  if(isAdmin){ lb.style.display='none'; ub.style.display='inline'; }
+  else { lb.style.display='inline'; ub.style.display='none'; }
+  // Hide settings tab for non-admins
+  document.querySelectorAll('.tab').forEach(t=>{
+    if(t.dataset.tab==='settings'||t.dataset.tab==='expenses'){
+      t.style.display = isAdmin ? '' : 'none';
+    }
+  });
+}
+
+document.getElementById('pinEnterBtn').addEventListener('click', ()=>{
+  const val = document.getElementById('pinInput').value.trim();
+  if(val === state.adminPin){
+    isAdmin = true;
+    hidePinOverlay();
+    updateLockUI();
+    render();
+  } else {
+    document.getElementById('pinError').textContent = 'Неверный PIN';
+    document.getElementById('pinInput').value='';
+  }
+});
+document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('pinEnterBtn').click(); });
+document.getElementById('pinViewOnlyBtn').addEventListener('click', ()=>{
+  hidePinOverlay();
+  updateLockUI();
+  render();
+});
+document.getElementById('lockBtn').addEventListener('click', ()=>showPinOverlay());
+document.getElementById('unlockBtn').addEventListener('click', ()=>{
+  isAdmin = false;
+  updateLockUI();
+  // Switch to dashboard if on restricted tab
+  if(view.tab==='settings'||view.tab==='expenses') view={tab:'dashboard',pointId:null};
+  render();
+});
 
 document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
 
@@ -240,81 +324,190 @@ function getPointDayBlocks(pid){
   return Object.values(blocks).sort((a,b)=>a.date.localeCompare(b.date));
 }
 
-function buildPointSheetData(p){
-  const blocks = getPointDayBlocks(p.id);
-  const headers = ['Дата', 'Вес стирка, кг', ...p.items.map(it=>it.name), 'Заметка', 'Перестирка, кг', ...state.restirkaItems.map(it=>'Перест.: '+it.name), 'Сумма стирка, ₽', 'Сумма перестирка, ₽', 'Итого, ₽'];
-  const rows = [
-    ['Точка', p.name],
-    [p.pricingType==='abonement' ? 'Абонемент' : 'Тариф', p.pricingType==='abonement' ? p.abonementFee+' ₽/мес до '+p.capKg+' кг, далее '+p.tariff+' ₽/кг' : p.tariff+' ₽/кг'],
-    [],
-    headers,
-  ];
-  let sumKg=0, sumRestKg=0, sumMainRub=0, sumRestRub=0;
-  blocks.forEach(b=>{
-    let mainKg=0, note='', itemTotals={};
+const MONTH_NAMES_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const DAY_NAMES_RU = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function getDayOfWeek(dateStr){ return DAY_NAMES_RU[new Date(dateStr).getDay()]; }
+function daysInMonth(yr, mo){ return new Date(yr, mo, 0).getDate(); }
+
+function buildYearlyWorkbook(p, year){
+  if(typeof XLSX === 'undefined'){ showToast('Нет соединения для экспорта'); return null; }
+  const wb = XLSX.utils.book_new();
+  const yr = year || new Date().getFullYear();
+  const monthTotalsForSummary = [];
+
+  for(let mo=1; mo<=12; mo++){
+    const mk = `${yr}-${String(mo).padStart(2,'0')}`;
+    const moName = MONTH_NAMES_RU[mo-1];
+    const numDays = daysInMonth(yr, mo);
+
+    const mEntries = pointEntries(p.id).filter(e=>monthKey(e.date)===mk);
+    const mRest    = restirkaEntries(p.id).filter(r=>monthKey(r.date)===mk);
+
+    // index by day
+    const byDay = {};
+    for(let d=1;d<=numDays;d++) byDay[d]={kg:0, items:{}, restKg:0, restRub:0, note:'', hasData:false};
+    mEntries.forEach(e=>{
+      const d=parseInt(e.date.split('-')[2]);
+      byDay[d].kg += e.kg||0;
+      byDay[d].hasData = true;
+      if(e.note) byDay[d].note = byDay[d].note ? byDay[d].note+'; '+e.note : e.note;
+      Object.entries(e.items||{}).forEach(([iid,n])=>{ byDay[d].items[iid]=(byDay[d].items[iid]||0)+n; });
+    });
+    mRest.forEach(r=>{
+      const d=parseInt(r.date.split('-')[2]);
+      byDay[d].restKg += r.kg||0; byDay[d].restRub += r.rub||0; byDay[d].hasData=true;
+    });
+
+    // calc totals
+    let totalKg=0, totalEd=0, totalShtuch=0, totalDays=0, totalRestKg=0, totalRestRub=0;
+    const itemTotals={};
     p.items.forEach(it=>itemTotals[it.id]=0);
-    b.mains.forEach(e=>{
-      mainKg += e.kg||0;
-      if(e.note) note = note ? note+'; '+e.note : e.note;
-      Object.entries(e.items||{}).forEach(([iid,n])=>{ itemTotals[iid]=(itemTotals[iid]||0)+n; });
-    });
-    let restKg=0, restItemTotals={};
-    state.restirkaItems.forEach(it=>restItemTotals[it.id]=0);
-    let restRub=0;
-    b.rests.forEach(r=>{
-      restKg += r.kg||0; restRub += r.rub||0;
-      Object.entries(r.qty||{}).forEach(([iid,n])=>{ restItemTotals[iid]=(restItemTotals[iid]||0)+n; });
-    });
-    const mainRub = p.pricingType==='perkg' ? fmt(mainKg*p.tariff) : '';
-    sumKg += mainKg; sumRestKg += restKg;
-    sumMainRub += (typeof mainRub==='number'?mainRub:0); sumRestRub += restRub;
-    const row = [
-      fmtDate(b.date)+'.'+b.date.slice(0,4),
-      mainKg||'',
-      ...p.items.map(it=>itemTotals[it.id]||''),
-      note,
-      restKg||'',
-      ...state.restirkaItems.map(it=>restItemTotals[it.id]||''),
-      mainRub===''?'':mainRub,
-      restRub||'',
-      fmt((typeof mainRub==='number'?mainRub:0)+restRub),
-    ];
-    rows.push(row);
+    for(let d=1;d<=numDays;d++){
+      const row=byDay[d];
+      if(row.kg>0||Object.keys(row.items).length>0) totalDays++;
+      totalKg+=row.kg; totalRestKg+=row.restKg; totalRestRub+=row.restRub;
+      let dayShtuch=0;
+      p.items.forEach(it=>{ const n=row.items[it.id]||0; itemTotals[it.id]+=n; totalEd+=n; if(it.pricePerUnit>0) dayShtuch+=n*it.pricePerUnit; });
+      totalShtuch+=dayShtuch;
+      row._shtuch=dayShtuch;
+    }
+    let totalMainRub=0;
+    if(p.pricingType==='abonement'){
+      const over=Math.max(0,totalKg-p.capKg);
+      totalMainRub=p.abonementFee+over*p.tariff;
+    } else { totalMainRub=Math.round(totalKg*p.tariff); }
+    const totalRub=totalMainRub+totalShtuch+totalRestRub;
+
+    monthTotalsForSummary.push({mo, moName, totalDays, totalKg:fmt(totalKg), totalRestKg:fmt(totalRestKg), totalEd, totalMainRub, totalShtuch, totalRestRub, totalRub});
+
+    // ── build rows ──
+    const rows=[];
+    rows.push([null, `${p.name.toUpperCase()} · ${moName.toUpperCase()} ${yr}`]);
+    rows.push([null, `${p.name} · Учёт стирки за ${moName.toLowerCase()} ${yr}`]);
+    rows.push([]);
+    // summary bar
+    rows.push([null,'ВЕС, КГ',null,null,null,null,'ЕДИНИЦ',null,null,null,null,'ДНЕЙ СТИРКИ',null,null,null,null,'К ОПЛАТЕ, ₽']);
+    rows.push([null,fmt(totalKg+totalRestKg),null,null,null,null,totalEd,null,null,null,null,totalDays,null,null,null,null,totalRub]);
+    rows.push([]);
+    // pricing info
+    if(p.pricingType==='abonement'){
+      rows.push([null,`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг). Сверх: ${p.tariff} ₽/кг`]);
+    } else {
+      rows.push([null,`Тариф: ${p.tariff} ₽/кг`]);
+    }
+    rows.push([]);
+    // column headers
+    const itemNames=p.items.map(it=>it.name);
+    rows.push([null,'День','ДН','Вес, кг','Всего ед.',...itemNames,'Перест.,кг','Заметки','Стирка,₽','Штучные,₽','Надбавки,₽','Доставка,₽','К оплате,₽']);
+    // day rows
+    for(let d=1;d<=numDays;d++){
+      const row=byDay[d];
+      const dateStr=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dn=getDayOfWeek(dateStr);
+      const ed=p.items.reduce((s,it)=>s+(row.items[it.id]||0),0);
+      const itemCols=p.items.map(it=>row.items[it.id]||null);
+      const dayMainRub=p.pricingType==='perkg'&&row.kg>0 ? Math.round(row.kg*p.tariff) : null;
+      const kToPlate=(dayMainRub||0)+(row._shtuch||0)+row.restRub || null;
+      rows.push([null,d,dn,row.kg||null,ed||null,...itemCols,
+        row.restKg||null, row.note||null,
+        dayMainRub, row._shtuch||null, null, null, kToPlate]);
+    }
+    // итого
+    const itemTotalCols=p.items.map(it=>itemTotals[it.id]||null);
+    rows.push([null,'ИТОГО',null,
+      totalKg?fmt(totalKg):null, totalEd||null, ...itemTotalCols,
+      totalRestKg?fmt(totalRestKg):null, null,
+      totalMainRub||null, totalShtuch||null, null, null, totalRub||null]);
+
+    if(mRest.length){
+      rows.push([]);
+      rows.push([null,`ПЕРЕСТИРКА (${state.restirkaTariff} ₽/кг)`]);
+      rows.push([null,'Дата','кг',...state.restirkaItems.map(it=>it.name+' шт'),'Сумма,₽']);
+      mRest.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
+        rows.push([null,r.date,r.kg,...state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||null),r.rub]);
+      });
+      rows.push([null,'Итого перестирка',fmt(totalRestKg),...state.restirkaItems.map(()=>null),Math.round(totalRestRub)]);
+    }
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:2},{wch:6},{wch:4},{wch:8},{wch:8},...p.items.map(()=>({wch:9})),{wch:10},{wch:22},{wch:10},{wch:10},{wch:10},{wch:10},{wch:12}];
+    const sheetName=`${String(mo).padStart(2,'0')}.${moName.slice(0,3)}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  }
+
+  // ── Summary sheet (like 🎯 Дашборд) ──
+  const sumRows=[];
+  sumRows.push([null,`${p.name} · ГОДОВОЙ ОТЧЁТ ${yr}`]);
+  sumRows.push([]);
+  sumRows.push([null,p.pricingType==='abonement'?`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг)`:`Тариф: ${p.tariff} ₽/кг`]);
+  sumRows.push([]);
+  sumRows.push([null,'Месяц','Дней','Кг стирка','Кг перест.','Итого кг','Ед.',`Стирка,₽`,'Штучные,₽','Перест.,₽','К оплате,₽']);
+  let gKg=0,gRub=0,gDays=0;
+  monthTotalsForSummary.forEach(t=>{
+    const totKg=fmt((parseFloat(t.totalKg)||0)+(parseFloat(t.totalRestKg)||0));
+    sumRows.push([null,t.moName,t.totalDays||null,t.totalKg||null,t.totalRestKg||null,totKg||null,t.totalEd||null,t.totalMainRub||null,t.totalShtuch||null,t.totalRestRub||null,t.totalRub||null]);
+    gKg+=parseFloat(totKg)||0; gRub+=t.totalRub||0; gDays+=t.totalDays||0;
   });
-  rows.push([]);
-  const abonementRub = p.pricingType==='abonement' ? p.abonementFee + Math.max(0,sumKg-p.capKg)*p.tariff : sumMainRub;
-  rows.push(['Итого', fmt(sumKg), ...p.items.map(()=>''), '', fmt(sumRestKg), ...state.restirkaItems.map(()=>''), fmt(abonementRub), fmt(sumRestRub), fmt(abonementRub+sumRestRub)]);
-  return rows;
+  sumRows.push([null,'ИТОГО ЗА ГОД',gDays,null,null,fmt(gKg),null,null,null,null,Math.round(gRub)]);
+  const wsSumm=XLSX.utils.aoa_to_sheet(sumRows);
+  wsSumm['!cols']=[{wch:2},{wch:14},{wch:6},{wch:12},{wch:12},{wch:10},{wch:6},{wch:12},{wch:12},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, wsSumm, '📊 Годовая сводка');
+
+  return wb;
 }
 
 function exportPointExcel(pid){
-  if(typeof XLSX === 'undefined'){ showToast('Нет подключения к интернету для экспорта'); return; }
-  const p = state.points.find(x=>x.id===pid);
-  const rows = buildPointSheetData(p);
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = rows[3].map((h,i)=> i===0 ? {wch:12} : {wch: Math.max(10, String(h).length+2)});
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, p.name.slice(0,31));
-  XLSX.writeFile(wb, `${p.name.replace(/\s+/g,'_')}_${todayStr()}.xlsx`);
-  showToast('Файл сохранён');
+  const p=state.points.find(x=>x.id===pid);
+  const yr=new Date().getFullYear();
+  showToast('Формирую годовой Excel...');
+  setTimeout(()=>{
+    const wb=buildYearlyWorkbook(p, yr);
+    if(!wb) return;
+    XLSX.writeFile(wb, `${p.name.replace(/\s+/g,'_')}_${yr}.xlsx`);
+    showToast('Готово!');
+  },50);
 }
 
 function exportAllExcel(){
-  if(typeof XLSX === 'undefined'){ showToast('Нет подключения к интернету для экспорта'); return; }
-  const wb = XLSX.utils.book_new();
-  state.points.forEach(p=>{
-    const rows = buildPointSheetData(p);
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = rows[3].map((h,i)=> i===0 ? {wch:12} : {wch: Math.max(10, String(h).length+2)});
-    XLSX.utils.book_append_sheet(wb, ws, p.name.slice(0,31));
-  });
-  XLSX.writeFile(wb, `Прачечная_все_точки_${todayStr()}.xlsx`);
-  showToast('Файл сохранён');
+  if(typeof XLSX==='undefined'){ showToast('Нет соединения для экспорта'); return; }
+  const yr=new Date().getFullYear();
+  showToast('Формирую сводный файл...');
+  setTimeout(()=>{
+    const wb=XLSX.utils.book_new();
+    // Summary across all points
+    const mk=thisMonthKey();
+    const sumRows=[];
+    sumRows.push([null,`СВОДКА ПО ВСЕМ ТОЧКАМ · ${yr}`]);
+    sumRows.push([]);
+    sumRows.push([null,'Точка','Адрес','Кг (стирка)','Кг (перест.)','Итого кг','К оплате,₽']);
+    let gKg=0,gRub=0;
+    state.points.forEach(p=>{
+      const t=pointMonthTotals(p.id,mk);
+      sumRows.push([null,p.name,p.address||'',t.kgMain,t.kgRestirka,t.kg,Math.round(t.rub)]);
+      gKg+=parseFloat(t.kg)||0; gRub+=parseFloat(t.rub)||0;
+    });
+    sumRows.push([null,'ИТОГО','','','',fmt(gKg),Math.round(gRub)]);
+    const wsS=XLSX.utils.aoa_to_sheet(sumRows);
+    wsS['!cols']=[{wch:2},{wch:16},{wch:22},{wch:12},{wch:12},{wch:10},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,wsS,'Сводка');
+    // Per-point yearly tabs
+    state.points.forEach(p=>{
+      const ptWb=buildYearlyWorkbook(p,yr);
+      if(!ptWb) return;
+      ptWb.SheetNames.forEach(sn=>{
+        const label=(p.name.slice(0,8)+' '+sn).slice(0,31);
+        XLSX.utils.book_append_sheet(wb,ptWb.Sheets[sn],label);
+      });
+    });
+    XLSX.writeFile(wb,`Прачечная_${yr}.xlsx`);
+    showToast('Готово!');
+  },50);
 }
 
 function render(){
-  const titles = {dashboard:'Дашборд', points:'Точки', restirka:'Перестирка', expenses:'Расходы', driver:'Водитель'};
-  document.getElementById('topTitle').textContent = view.pointId ? (state.points.find(p=>p.id===view.pointId)?.name||'') : titles[view.tab];
+  const titles = {dashboard:'Дашборд', points:'Точки', restirka:'Перестирка', expenses:'Расходы', driver:'Водитель', settings:'Настройки'};
+  document.getElementById('topTitle').textContent = view.pointId ? (state.points.find(p=>p.id===view.pointId)?.name||'') : view.settingPointId ? 'Настройка точки' : titles[view.tab];
+  updateLockUI();
   const el = document.getElementById('view');
   el.innerHTML = '';
   if(view.tab==='dashboard') renderDashboard(el);
@@ -322,6 +515,7 @@ function render(){
   else if(view.tab==='restirka') renderRestirka(el);
   else if(view.tab==='expenses') renderExpenses(el);
   else if(view.tab==='driver') renderDriver(el);
+  else if(view.tab==='settings') view.settingPointId ? renderSettingsPoint(el) : renderSettings(el);
 }
 
 function renderDashboard(el){
@@ -411,6 +605,7 @@ function renderPointDetail(el){
       <div id="pricingFields"></div>
     </div>
 
+    ${isAdmin ? `
     <div class="card">
       <label class="f"><span class="flabel">Дата</span><input type="date" id="dateInput" value="${todayStr()}"></label>
       <label class="f"><span class="flabel">Вес, кг (по весам)</span><input type="number" id="kgInput" placeholder="0" step="0.1"></label>
@@ -423,6 +618,7 @@ function renderPointDetail(el){
       <label class="f" style="margin-top:12px;"><span class="flabel">Заметка</span><input type="text" id="noteInput" placeholder="срочно, доставка и т.д."></label>
       <button class="btn btn-primary btn-block" id="addEntryBtn">Добавить запись</button>
     </div>
+    ` : `<div class="card" style="padding:14px;"><div class="hint" style="margin:0;">👁 Режим просмотра — добавление записей недоступно</div></div>`}
 
     <div class="section-title">История</div>
     <div class="card" id="historyCard" style="padding:6px 14px;"></div>
@@ -433,6 +629,7 @@ function renderPointDetail(el){
 
   function renderPricingFields(){
     const pf = el.querySelector('#pricingFields');
+    if(!isAdmin){ pf.innerHTML=`<div class="hint" style="margin:0;">${p.pricingType==='abonement'?`Абонемент ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг)`:`Тариф: ${p.tariff} ₽/кг`}</div>`; return; }
     if(p.pricingType==='abonement'){
       pf.innerHTML = `
         <label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="abonementFee" value="${p.abonementFee}" step="1000"></label>
@@ -452,42 +649,46 @@ function renderPointDetail(el){
     d.addEventListener('click', ()=>{ p.pricingType = d.dataset.pt; saveState(); render(); });
   });
 
-  const ifld = el.querySelector('#itemFields');
-  function renderItemFields(){
-    ifld.innerHTML='';
-    p.items.forEach(it=>{
-      const row = document.createElement('div');
-      row.className = 'item-grid';
-      row.innerHTML = `<span class="iname">${it.name}</span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
-      ifld.appendChild(row);
+  if(el.querySelector('#itemFields')){
+    const ifld = el.querySelector('#itemFields');
+    function renderItemFields(){
+      ifld.innerHTML='';
+      p.items.forEach(it=>{
+        const row = document.createElement('div');
+        row.className = 'item-grid';
+        row.style.gridTemplateColumns = '1fr 64px';
+        const priceHint = it.pricePerUnit>0 ? ` <span style="color:var(--amber);font-size:11px;">${it.pricePerUnit}₽/шт</span>` : '';
+        row.innerHTML = `<span class="iname">${it.name}${priceHint}</span><input type="number" data-item="${it.id}" placeholder="0" min="0">`;
+        ifld.appendChild(row);
+      });
+    }
+    renderItemFields();
+
+    el.querySelector('#addItemBtn').addEventListener('click', ()=>{
+      const inp = el.querySelector('#newItemName');
+      const name = inp.value.trim();
+      if(!name) return;
+      const id = name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
+      p.items.push({id, name, pricePerUnit:0});
+      inp.value='';
+      saveState(); renderItemFields();
+    });
+
+    el.querySelector('#addEntryBtn').addEventListener('click', ()=>{
+      const date = el.querySelector('#dateInput').value || todayStr();
+      const kg = parseFloat(el.querySelector('#kgInput').value);
+      const note = el.querySelector('#noteInput').value.trim();
+      const items = {};
+      el.querySelectorAll('[data-item]').forEach(inp=>{
+        const n = parseInt(inp.value)||0;
+        if(n>0) items[inp.dataset.item]=n;
+      });
+      if(!kg && !Object.keys(items).length){ showToast('Укажи вес или позиции'); return; }
+      if(!state.entries[p.id]) state.entries[p.id]=[];
+      state.entries[p.id].push({date, kg: kg||0, items, note});
+      saveState(); showToast('Запись добавлена'); render();
     });
   }
-  renderItemFields();
-
-  el.querySelector('#addItemBtn').addEventListener('click', ()=>{
-    const inp = el.querySelector('#newItemName');
-    const name = inp.value.trim();
-    if(!name) return;
-    const id = name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
-    p.items.push({id, name});
-    inp.value='';
-    saveState(); renderItemFields();
-  });
-
-  el.querySelector('#addEntryBtn').addEventListener('click', ()=>{
-    const date = el.querySelector('#dateInput').value || todayStr();
-    const kg = parseFloat(el.querySelector('#kgInput').value);
-    const note = el.querySelector('#noteInput').value.trim();
-    const items = {};
-    el.querySelectorAll('[data-item]').forEach(inp=>{
-      const n = parseInt(inp.value)||0;
-      if(n>0) items[inp.dataset.item]=n;
-    });
-    if(!kg && !Object.keys(items).length){ showToast('Укажи вес или позиции'); return; }
-    if(!state.entries[p.id]) state.entries[p.id]=[];
-    state.entries[p.id].push({date, kg: kg||0, items, note});
-    saveState(); showToast('Запись добавлена'); render();
-  });
 
   const hc = el.querySelector('#historyCard');
   const blocks = {};
@@ -525,9 +726,9 @@ function renderPointDetail(el){
           <span class="ed">${fmtDate(e.date)}</span>
           <span class="ek">Стирка${e.kg?': '+e.kg+' кг':''}${e.note?' · '+e.note:''}${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
           <span class="ep">${dayRub!==null ? rub(dayRub) : '—'}</span>
-          <span class="edel" data-mainidx="${realIdx}">✕</span>
+          ${isAdmin?`<span class="edel" data-mainidx="${realIdx}">✕</span>`:''}
         `;
-        row.querySelector('.edel').addEventListener('click', ()=>{ state.entries[p.id].splice(realIdx,1); saveState(); render(); });
+        if(isAdmin) row.querySelector('.edel').addEventListener('click', ()=>{ state.entries[p.id].splice(realIdx,1); saveState(); render(); });
         wrap.appendChild(row);
       });
 
@@ -545,9 +746,9 @@ function renderPointDetail(el){
           <span class="ed"></span>
           <span class="ek" style="color:var(--steam)">Перестирка: ${r.kg} кг${itemsStr?`<div class="eitems">${itemsStr}</div>`:''}</span>
           <span class="ep">${rub(r.rub)}</span>
-          <span class="edel" data-restidx="${realIdx}">✕</span>
+          ${isAdmin?`<span class="edel" data-restidx="${realIdx}">✕</span>`:''}
         `;
-        row.querySelector('.edel').addEventListener('click', ()=>{ state.restirka[p.id].splice(realIdx,1); saveState(); render(); });
+        if(isAdmin) row.querySelector('.edel').addEventListener('click', ()=>{ state.restirka[p.id].splice(realIdx,1); saveState(); render(); });
         wrap.appendChild(row);
       });
 
@@ -734,10 +935,171 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ─── Settings ─────────────────────────────────────────────────
+
+function renderSettings(el){
+  if(!isAdmin){ el.innerHTML=`<div class="empty"><span class="ic">🔒</span>Раздел доступен только администратору</div>`; return; }
+  el.innerHTML = `
+    <div class="section-title">Управление точками</div>
+    <div id="settingsList"></div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text)">Добавить новую точку</div>
+      <label class="f"><span class="flabel">Название</span><input type="text" id="newPName" placeholder="Название точки"></label>
+      <label class="f"><span class="flabel">Адрес</span><input type="text" id="newPAddr" placeholder="ул. Пример, 1"></label>
+      <div class="seg" id="newPriceSeg">
+        <div data-pt="perkg" class="active">За кг</div>
+        <div data-pt="abonement">Абонемент</div>
+      </div>
+      <label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="newPTariff" placeholder="100" step="1"></label>
+      <button class="btn btn-primary btn-block" id="addPointBtn">Добавить точку</button>
+    </div>
+
+    <div class="section-title">Доступ · PIN-код</div>
+    <div class="card">
+      <div class="hint">${state.adminPin ? 'PIN установлен. При открытии сайта другие увидят только дашборд и точки (без редактирования).' : 'PIN не задан — все могут редактировать. Задай PIN чтобы ограничить доступ.'}</div>
+      <label class="f"><span class="flabel">${state.adminPin ? 'Новый PIN (оставь пустым чтобы убрать защиту)' : 'Задать PIN'}</span>
+        <input type="password" id="newPin" placeholder="4+ цифры" inputmode="numeric" maxlength="10">
+      </label>
+      ${state.adminPin ? `<label class="f"><span class="flabel">Текущий PIN (подтверждение)</span><input type="password" id="curPin" placeholder="текущий PIN" inputmode="numeric"></label>` : ''}
+      <button class="btn btn-primary btn-block" id="savePinBtn">${state.adminPin ? 'Обновить PIN' : 'Установить PIN'}</button>
+    </div>
+  `;
+  el.querySelector('#savePinBtn').addEventListener('click',()=>{
+    const newPin = el.querySelector('#newPin').value.trim();
+    const curPinEl = el.querySelector('#curPin');
+    if(state.adminPin && curPinEl){
+      if(curPinEl.value.trim() !== state.adminPin){ showToast('Текущий PIN неверный'); return; }
+    }
+    if(newPin && newPin.length < 4){ showToast('PIN должен быть не менее 4 цифр'); return; }
+    state.adminPin = newPin;
+    if(!newPin) isAdmin = true; // removed pin = open mode
+    saveState(); showToast(newPin ? 'PIN установлен' : 'PIN убран'); render();
+  });
+
+  let newPricingType = 'perkg';
+  el.querySelectorAll('#newPriceSeg div').forEach(d=>d.addEventListener('click',()=>{
+    newPricingType=d.dataset.pt;
+    el.querySelectorAll('#newPriceSeg div').forEach(x=>x.classList.toggle('active',x===d));
+  }));
+
+  const sl = el.querySelector('#settingsList');
+  state.points.forEach((p,i)=>{
+    const card = document.createElement('div');
+    card.className = 'point-card';
+    card.innerHTML = `
+      <div class="point-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="pname">${p.name}</div>
+        <div class="pmeta">${p.address||'адрес не указан'} · ${p.items.length} позиций</div>
+      </div>
+      <div class="chev">›</div>
+    `;
+    card.addEventListener('click',()=>{ view.settingPointId=p.id; render(); });
+    sl.appendChild(card);
+  });
+
+  el.querySelector('#addPointBtn').addEventListener('click',()=>{
+    const name = el.querySelector('#newPName').value.trim();
+    const address = el.querySelector('#newPAddr').value.trim();
+    const tariff = parseFloat(el.querySelector('#newPTariff').value)||100;
+    if(!name){ showToast('Введи название точки'); return; }
+    const id = 'point_'+Date.now();
+    state.points.push({id, name, address, pricingType:newPricingType, tariff, abonementFee:0, capKg:0, items:[]});
+    saveState(); showToast('Точка добавлена'); render();
+  });
+}
+
+function renderSettingsPoint(el){
+  const p = state.points.find(x=>x.id===view.settingPointId);
+  const idx = state.points.indexOf(p);
+  el.innerHTML = `
+    <div class="back-row"><span class="back-btn" id="spBack">‹ Настройки</span></div>
+    <div class="card">
+      <label class="f"><span class="flabel">Название</span><input type="text" id="spName" value="${p.name}"></label>
+      <label class="f"><span class="flabel">Адрес</span><input type="text" id="spAddr" value="${p.address||''}"></label>
+      <div class="seg">
+        <div data-pt="perkg" class="${p.pricingType==='perkg'?'active':''}">За кг</div>
+        <div data-pt="abonement" class="${p.pricingType==='abonement'?'active':''}">Абонемент</div>
+      </div>
+      <label class="f"><span class="flabel">Тариф, ₽/кг</span><input type="number" id="spTariff" value="${p.tariff}"></label>
+      ${p.pricingType==='abonement'?`
+      <label class="f"><span class="flabel">Абонемент, ₽/мес</span><input type="number" id="spFee" value="${p.abonementFee}"></label>
+      <label class="f"><span class="flabel">Лимит, кг/мес</span><input type="number" id="spCap" value="${p.capKg}"></label>
+      `:''}
+      <button class="btn btn-primary btn-block" id="spSaveBtn" style="margin-bottom:8px;">Сохранить изменения</button>
+      <button class="btn btn-block" id="spDelBtn" style="color:var(--red);border-color:var(--red);">Удалить точку</button>
+    </div>
+
+    <div class="section-title">Позиции и штучные цены</div>
+    <div class="card" id="spItemsCard">
+      <div id="spItemsList"></div>
+      <div style="margin-top:10px; font-size:11.5px; color:var(--text-faint); margin-bottom:8px;">Добавить позицию:</div>
+      <div class="addrow" style="margin-bottom:8px;">
+        <input type="text" id="spNewItem" placeholder="Название позиции" style="flex:1;">
+        <input type="number" id="spNewPrice" placeholder="₽/шт" style="width:70px;flex:none;">
+        <button class="btn btn-sm" id="spAddItemBtn">+</button>
+      </div>
+    </div>
+  `;
+  el.querySelector('#spBack').addEventListener('click',()=>{ view.settingPointId=null; render(); });
+  el.querySelectorAll('.seg div').forEach(d=>d.addEventListener('click',()=>{ p.pricingType=d.dataset.pt; saveState(); render(); }));
+
+  function bindSave(){
+    el.querySelector('#spSaveBtn').addEventListener('click',()=>{
+      p.name = el.querySelector('#spName').value.trim()||p.name;
+      p.address = el.querySelector('#spAddr').value.trim();
+      p.tariff = parseFloat(el.querySelector('#spTariff').value)||p.tariff;
+      if(el.querySelector('#spFee')) p.abonementFee = parseFloat(el.querySelector('#spFee').value)||0;
+      if(el.querySelector('#spCap')) p.capKg = parseFloat(el.querySelector('#spCap').value)||0;
+      saveState(); showToast('Сохранено'); render();
+    });
+    el.querySelector('#spDelBtn').addEventListener('click',()=>{
+      if(!confirm('Удалить точку "'+p.name+'"? Все данные по ней останутся, но точка исчезнет из списка.')) return;
+      state.points.splice(idx,1);
+      saveState(); view.settingPointId=null; render();
+    });
+  }
+  bindSave();
+
+  function renderSpItems(){
+    const sl = el.querySelector('#spItemsList');
+    sl.innerHTML='';
+    p.items.forEach((it,ii)=>{
+      const row = document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 80px 30px;gap:6px;align-items:center;margin-bottom:6px;';
+      row.innerHTML=`
+        <span style="font-size:13px;color:var(--text-dim);">${it.name}</span>
+        <input type="number" placeholder="₽/шт" value="${it.pricePerUnit||''}" style="padding:6px 8px;font-size:13px;" data-iidx="${ii}">
+        <span style="color:var(--text-faint);cursor:pointer;font-size:15px;text-align:center;" data-del="${ii}">✕</span>
+      `;
+      row.querySelector('input').addEventListener('change',e=>{ p.items[ii].pricePerUnit=parseFloat(e.target.value)||0; saveState(); });
+      row.querySelector('[data-del]').addEventListener('click',()=>{ p.items.splice(ii,1); saveState(); renderSpItems(); });
+      sl.appendChild(row);
+    });
+  }
+  renderSpItems();
+  el.querySelector('#spAddItemBtn').addEventListener('click',()=>{
+    const name=el.querySelector('#spNewItem').value.trim();
+    const price=parseFloat(el.querySelector('#spNewPrice').value)||0;
+    if(!name){ showToast('Введи название'); return; }
+    const id=name.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_')+'_'+Date.now();
+    p.items.push({id,name,pricePerUnit:price});
+    el.querySelector('#spNewItem').value='';
+    el.querySelector('#spNewPrice').value='';
+    saveState(); renderSpItems();
+  });
+}
+
 // ─── Excel Export ────────────────────────────────────────────────
 
+const MONTH_NAMES_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const DAY_NAMES = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+function getDayName(dateStr){
+  return DAY_NAMES[new Date(dateStr).getDay()];
+}
+
 function buildPointSheetData(p){
-  // Collect all months that have data
   const allEntries = pointEntries(p.id);
   const allRestirka = restirkaEntries(p.id);
   const allDates = [...new Set([...allEntries.map(e=>e.date), ...allRestirka.map(r=>r.date)])].sort();
@@ -748,81 +1110,186 @@ function buildPointSheetData(p){
 
   months.forEach(mk=>{
     const [yr, mo] = mk.split('-');
-    const monthNames = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-    const sheetName = monthNames[parseInt(mo)] || mk;
+    const moInt = parseInt(mo);
+    const moName = MONTH_NAMES_RU[moInt-1];
+    const daysInMonth = new Date(parseInt(yr), moInt, 0).getDate();
 
-    const mEntries = allEntries.filter(e=>monthKey(e.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
-    const mRest = allRestirka.filter(r=>monthKey(r.date)===mk).sort((a,b)=>a.date.localeCompare(b.date));
+    const mEntries = allEntries.filter(e=>monthKey(e.date)===mk);
+    const mRest = allRestirka.filter(r=>monthKey(r.date)===mk);
 
-    // Header rows
-    const rows = [];
-    rows.push([p.name + ' — ' + sheetName + ' ' + yr]);
-    rows.push([]);
-
-    // Pricing info
-    if(p.pricingType==='abonement'){
-      rows.push(['Абонемент:', p.abonementFee + ' ₽/мес', 'Лимит:', p.capKg + ' кг', 'Сверх:', p.tariff + ' ₽/кг']);
-    } else {
-      rows.push(['Тариф:', p.tariff + ' ₽/кг']);
-    }
-    rows.push([]);
-
-    // ОСНОВНАЯ СТИРКА
-    rows.push(['ОСНОВНАЯ СТИРКА']);
-    // Build item columns
-    const itemNames = p.items.map(it=>it.name);
-    rows.push(['Дата', 'Кг', ...itemNames, 'Заметка', 'Сумма, ₽']);
-
-    let totalKgMain = 0, totalRubMain = 0;
+    // Build lookup by day
+    const byDay = {};
+    for(let d=1;d<=daysInMonth;d++) byDay[d]={kg:0, items:{}, restKg:0, restRub:0, note:'', rubMain:0, rubShtuch:0};
     mEntries.forEach(e=>{
-      const entryRub = p.pricingType==='perkg' ? (e.kg||0)*p.tariff : '';
-      const itemCols = p.items.map(it=>(e.items&&e.items[it.id])||'');
-      rows.push([e.date, e.kg||'', ...itemCols, e.note||'', entryRub]);
-      totalKgMain += e.kg||0;
-      if(p.pricingType==='perkg') totalRubMain += (e.kg||0)*p.tariff;
+      const day = parseInt(e.date.split('-')[2]);
+      byDay[day].kg += e.kg||0;
+      byDay[day].note = e.note||'';
+      if(e.items) Object.entries(e.items).forEach(([iid,n])=>{ byDay[day].items[iid]=(byDay[day].items[iid]||0)+n; });
     });
-    if(p.pricingType==='abonement'){
-      const overKg = Math.max(0, totalKgMain - p.capKg);
-      totalRubMain = p.abonementFee + overKg*p.tariff;
-    }
-    rows.push(['ИТОГО стирка', fmt(totalKgMain), ...p.items.map(()=>''), '', Math.round(totalRubMain)]);
-    rows.push([]);
+    mRest.forEach(r=>{
+      const day = parseInt(r.date.split('-')[2]);
+      byDay[day].restKg += r.kg||0;
+      byDay[day].restRub += r.rub||0;
+    });
 
-    // ПЕРЕСТИРКА
-    if(mRest.length){
-      rows.push(['ПЕРЕСТИРКА (тариф ' + state.restirkaTariff + ' ₽/кг)']);
-      const rItemNames = state.restirkaItems.map(it=>it.name+' ('+it.weight+'г)');
-      rows.push(['Дата', 'Кг', ...rItemNames, 'Сумма, ₽']);
-      let totalKgRest=0, totalRubRest=0;
-      mRest.forEach(r=>{
-        const qCols = state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||'');
-        rows.push([r.date, r.kg, ...qCols, r.rub]);
-        totalKgRest += r.kg||0;
-        totalRubRest += r.rub||0;
+    // Calculate money per day
+    let totalKg=0, totalShtuch=0, totalNadb=0, totalRub=0, totalDays=0, totalEd=0;
+    let totalRestKg=0, totalRestRub=0;
+    for(let d=1;d<=daysInMonth;d++){
+      const row = byDay[d];
+      if(row.kg>0 || Object.keys(row.items).length) totalDays++;
+      totalKg += row.kg;
+      totalRestKg += row.restKg;
+      totalRestRub += row.restRub;
+      // штучные
+      let dayEd=0, dayShtuch=0;
+      p.items.forEach(it=>{
+        const qty = row.items[it.id]||0;
+        dayEd += qty;
+        if(it.pricePerUnit>0) dayShtuch += qty*it.pricePerUnit;
       });
-      rows.push(['ИТОГО перестирка', fmt(totalKgRest), ...state.restirkaItems.map(()=>''), Math.round(totalRubRest)]);
+      totalEd += dayEd;
+      totalShtuch += dayShtuch;
+      row.rubShtuch = dayShtuch;
+      // стирка
+      const dayRubMain = p.pricingType==='perkg' ? row.kg*p.tariff : 0;
+      row.rubMain = dayRubMain;
+      totalRub += dayRubMain + dayShtuch;
+    }
+    if(p.pricingType==='abonement'){
+      const overKg = Math.max(0, totalKg - p.capKg);
+      totalRub = p.abonementFee + overKg*p.tariff + totalShtuch;
+    }
+
+    // Build sheet rows like original
+    const rows = [];
+    // Row 1: title
+    rows.push([null, `${p.name.toUpperCase()} · ${moName.toUpperCase()} ${yr}`]);
+    // Row 2: subtitle
+    rows.push([null, `${p.name} · Учёт стирки за ${moName.toLowerCase()} ${yr}`]);
+    rows.push([]);
+    // Row 4: summary headers
+    rows.push([null, 'ВЕС, КГ', null, null, null, null, 'ЕДИНИЦ', null, null, null, null, 'ДНЕЙ СТИРКИ', null, null, null, null, 'К ОПЛАТЕ, ₽']);
+    // Row 5: summary values
+    rows.push([null, fmt(totalKg+totalRestKg), null, null, null, null, totalEd, null, null, null, null, totalDays, null, null, null, null, Math.round(totalRub+totalRestRub)]);
+    rows.push([]);
+    // Row 7: column headers
+    const itemNames = p.items.map(it=>it.name);
+    rows.push([null,'День','ДН','Вес, кг','Всего ед.',...itemNames,'Перест.,кг','Заметки','Стирка,₽','Штучные,₽','Надбавки,₽','Доставка,₽','К оплате,₽']);
+
+    // Day rows
+    const itemTotals = {};
+    p.items.forEach(it=>itemTotals[it.id]=0);
+    for(let d=1;d<=daysInMonth;d++){
+      const row = byDay[d];
+      const dateStr = `${yr}-${mo}-${String(d).padStart(2,'0')}`;
+      const dn = getDayName(dateStr);
+      const ed = p.items.reduce((s,it)=>s+(row.items[it.id]||0),0);
+      const itemCols = p.items.map(it=>{ const n=row.items[it.id]||0; itemTotals[it.id]+=n; return n||null; });
+      const kToPlate = row.rubMain + row.rubShtuch + row.restRub;
+      rows.push([null, d, dn, row.kg||null, ed||null, ...itemCols,
+        row.restKg||null, row.note||null,
+        row.rubMain||null, row.rubShtuch||null, null, null,
+        kToPlate||null]);
+    }
+
+    // ИТОГО row
+    const itemTotalCols = p.items.map(it=>itemTotals[it.id]||null);
+    rows.push([null,'ИТОГО',null,fmt(totalKg),totalEd||null,...itemTotalCols,
+      fmt(totalRestKg)||null, null,
+      p.pricingType==='perkg'?Math.round(totalKg*p.tariff):p.abonementFee,
+      Math.round(totalShtuch)||null, null, null,
+      Math.round(totalRub+totalRestRub)]);
+
+    // if abonement – explain
+    if(p.pricingType==='abonement'){
       rows.push([]);
-      rows.push(['ИТОГО ЗА МЕСЯЦ', fmt(totalKgMain+totalKgRest), ...([...p.items,...state.restirkaItems]).map(()=>''), Math.round(totalRubMain+totalRubRest)]);
-    } else {
-      rows.push(['ИТОГО ЗА МЕСЯЦ', fmt(totalKgMain), ...p.items.map(()=>''), '', Math.round(totalRubMain)]);
+      rows.push([null, `Абонемент: ${p.abonementFee.toLocaleString('ru-RU')} ₽/мес (до ${p.capKg} кг). Сверх лимита: ${p.tariff} ₽/кг.`]);
+    }
+
+    // Перестирка block if any
+    if(mRest.length){
+      rows.push([]);
+      rows.push([null, `ПЕРЕСТИРКА (тариф ${state.restirkaTariff} ₽/кг)`]);
+      const rHdr = state.restirkaItems.map(it=>it.name+' шт');
+      rows.push([null,'Дата','кг',...rHdr,'Сумма, ₽']);
+      let rTotalKg=0, rTotalRub=0;
+      mRest.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
+        const qCols = state.restirkaItems.map(it=>(r.qty&&r.qty[it.id])||null);
+        rows.push([null, r.date, r.kg, ...qCols, r.rub]);
+        rTotalKg+=r.kg; rTotalRub+=r.rub;
+      });
+      rows.push([null,'ИТОГО',fmt(rTotalKg),...state.restirkaItems.map(()=>null),Math.round(rTotalRub)]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     // Column widths
-    ws['!cols'] = [{wch:12},{wch:8},...p.items.map(()=>({wch:10})),{wch:20},{wch:12}];
+    ws['!cols'] = [
+      {wch:2},{wch:6},{wch:4},{wch:8},{wch:8},
+      ...p.items.map(()=>({wch:10})),
+      {wch:10},{wch:20},{wch:10},{wch:10},{wch:10},{wch:10},{wch:12}
+    ];
+    const sheetName = `${String(moInt).padStart(2,'0')}.${moName.slice(0,3)}`;
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
+
+  // Summary sheet
+  const summaryRows = [];
+  summaryRows.push([null, `${p.name} · ГОДОВОЙ ОТЧЁТ`]);
+  summaryRows.push([]);
+  summaryRows.push([null,'Месяц','Дней','Кг (стирка)','Кг (перест.)','Итого кг','Штучных, ₽','К оплате, ₽']);
+  let gKg=0, gRub=0;
+  months.forEach(mk=>{
+    const [yr,mo]=mk.split('-');
+    const t = pointMonthTotals(p.id, mk);
+    const moName = MONTH_NAMES_RU[parseInt(mo)-1];
+    summaryRows.push([null, moName+' '+yr, t.days, t.kgMain, t.kgRestirka, t.kg, null, Math.round(t.rub)]);
+    gKg+=t.kg; gRub+=t.rub;
+  });
+  summaryRows.push([null,'ИТОГО',null,null,null,fmt(gKg),null,Math.round(gRub)]);
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols']=[{wch:2},{wch:16},{wch:6},{wch:12},{wch:12},{wch:10},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Сводка');
+
+  // Дашборд sheet — first, like original
+  const dashRows = [];
+  dashRows.push([null, `${p.name.toUpperCase()} · ГОДОВОЙ УЧЁТ ${new Date().getFullYear()}`]);
+  dashRows.push([]);
+  dashRows.push([null,'Месяц','Дней','Кг (стирка)','Кг (перест.)','Итого кг','Стирка, ₽','Перест., ₽','Итого, ₽','На выезд, ₽']);
+  let gKg=0, gRub=0, gDays=0;
+  months.forEach(mk=>{
+    const [yr2,mo2]=mk.split('-');
+    const t = pointMonthTotals(p.id, mk);
+    const moName2 = MONTH_NAMES_RU[parseInt(mo2)-1];
+    const perDay = t.days>0 ? Math.round(t.rub/t.days) : 0;
+    dashRows.push([null,moName2+' '+yr2, t.days, t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub), perDay]);
+    gKg+=parseFloat(t.kg); gRub+=t.rub; gDays+=t.days;
+  });
+  dashRows.push([null,'ИТОГО ЗА ГОД',gDays,null,null,fmt(gKg),null,null,Math.round(gRub),gDays>0?Math.round(gRub/gDays):0]);
+  dashRows.push([]);
+  if(p.pricingType==='abonement'){
+    dashRows.push([null,'УСЛОВИЯ: Абонемент',p.abonementFee,'₽/мес до',p.capKg,'кг. Сверх:',p.tariff,'₽/кг']);
+  } else {
+    dashRows.push([null,'УСЛОВИЯ: Тариф',p.tariff,'₽/кг']);
+  }
+  const wsDash = XLSX.utils.aoa_to_sheet(dashRows);
+  wsDash['!cols']=[{wch:2},{wch:16},{wch:6},{wch:12},{wch:12},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsDash, '🎯 Дашборд');
 
   return wb;
 }
 
 function exportPointExcel(pid){
   const p = state.points.find(x=>x.id===pid);
-  showToast('Формирую Excel...');
+  showToast('Формирую годовой Excel...');
   setTimeout(()=>{
     const wb = buildPointSheetData(p);
     if(!wb){ showToast('Нет данных для экспорта'); return; }
-    const fname = p.name.replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,7) + '.xlsx';
+    // Move Сводка to front
+    const sIdx = wb.SheetNames.indexOf('Сводка');
+    if(sIdx>0){ wb.SheetNames.splice(sIdx,1); wb.SheetNames.unshift('Сводка'); }
+    const yr = new Date().getFullYear();
+    const fname = `${p.name.replace(/\s+/g,'_')}_Учет_Годовой_${yr}.xlsx`;
     XLSX.writeFile(wb, fname);
     showToast('Готово: ' + fname);
   }, 50);
@@ -834,47 +1301,47 @@ function exportAllExcel(){
     const wb = XLSX.utils.book_new();
     const mk = thisMonthKey();
     const [yr, mo] = mk.split('-');
-    const monthNames = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const moName = MONTH_NAMES_RU[parseInt(mo)-1];
 
     // Summary sheet
     const summaryRows = [
-      ['СВОДНЫЙ ОТЧЁТ — ' + monthNames[parseInt(mo)] + ' ' + yr],
+      [null, `СВОДНЫЙ ОТЧЁТ — ${moName} ${yr}`],
       [],
-      ['Точка','Кг (стирка)','Кг (перест.)','Кг итого','Сумма стирка','Сумма перест.','Итого, ₽'],
+      [null,'Точка','Адрес','Кг (стирка)','Кг (перест.)','Кг итого','Сумма стирка','Сумма перест.','Итого, ₽'],
     ];
     let gKg=0, gRub=0;
     state.points.forEach(p=>{
       const t = pointMonthTotals(p.id, mk);
-      summaryRows.push([p.name, t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub)]);
+      summaryRows.push([null, p.name, p.address||'', t.kgMain, t.kgRestirka, t.kg, Math.round(t.rubMain), Math.round(t.rubRestirka), Math.round(t.rub)]);
       gKg += t.kg; gRub += t.rub;
     });
-    summaryRows.push(['ИТОГО', '', '', fmt(gKg), '', '', Math.round(gRub)]);
+    summaryRows.push([null,'ИТОГО','',null,null,fmt(gKg),null,null,Math.round(gRub)]);
     summaryRows.push([]);
 
     // Expenses
     const monthExp = state.expenses.filter(e=>monthKey(e.date)===mk);
     if(monthExp.length){
-      summaryRows.push(['РАСХОДЫ ПРАЧЕЧНОЙ']);
-      summaryRows.push(['Дата','Категория','Сумма, ₽','Заметка']);
-      monthExp.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>summaryRows.push([e.date, e.category, e.amount, e.note||'']));
-      summaryRows.push(['ИТОГО расходы','', monthExp.reduce((s,e)=>s+e.amount,0)]);
+      summaryRows.push([null,'РАСХОДЫ ПРАЧЕЧНОЙ']);
+      summaryRows.push([null,'Дата','Категория','Сумма, ₽','Заметка']);
+      monthExp.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>summaryRows.push([null,e.date,e.category,e.amount,e.note||'']));
+      summaryRows.push([null,'ИТОГО расходы','',monthExp.reduce((s,e)=>s+e.amount,0)]);
     }
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-    wsSummary['!cols'] = [{wch:16},{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14}];
+    wsSummary['!cols']=[{wch:2},{wch:16},{wch:20},{wch:12},{wch:12},{wch:10},{wch:14},{wch:14},{wch:14}];
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Сводка');
 
-    // One sheet per point
+    // One month-sheet per point
     state.points.forEach(p=>{
       const ptWb = buildPointSheetData(p);
       if(!ptWb) return;
-      ptWb.SheetNames.forEach(sn=>{
-        const label = (p.name.slice(0,12) + ' ' + sn).slice(0,31);
+      ptWb.SheetNames.filter(s=>s!=='Сводка').forEach(sn=>{
+        const label = (p.name.slice(0,10)+' '+sn).slice(0,31);
         XLSX.utils.book_append_sheet(wb, ptWb.Sheets[sn], label);
       });
     });
 
-    const fname = 'Прачечная_' + mk + '.xlsx';
+    const fname = `Прачечная_${mk}.xlsx`;
     XLSX.writeFile(wb, fname);
     showToast('Готово: ' + fname);
   }, 50);
