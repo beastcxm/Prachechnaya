@@ -24,7 +24,31 @@
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:90px;}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:90px;background-image:radial-gradient(circle,rgba(255,255,255,0.035) 1px,transparent 1px);background-size:24px 24px;}
+
+  /* ── Quick entry FAB ── */
+  .fab{position:fixed;bottom:96px;right:18px;z-index:25;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--steam),var(--steam-2));box-shadow:0 4px 20px var(--steam-glow),0 2px 8px rgba(0,0,0,0.5);border:none;cursor:pointer;font-size:24px;color:#071a1f;display:flex;align-items:center;justify-content:center;font-weight:300;transition:transform .15s,box-shadow .15s;}
+  .fab:active{transform:scale(.93);box-shadow:0 2px 10px var(--steam-glow);}
+
+  /* ── Quick entry modal ── */
+  #quickModal{display:none;position:fixed;inset:0;z-index:100;background:rgba(8,11,16,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;}
+  #quickModal.open{display:flex;}
+  #quickSheet{width:100%;max-width:520px;background:var(--surface-2);border-radius:24px 24px 0 0;border-top:1px solid var(--border-mid);padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto;animation:slideUp .25s cubic-bezier(.32,1,.23,1);}
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  #quickSheet .sheet-handle{width:36px;height:4px;background:var(--border-mid);border-radius:2px;margin:0 auto 18px;}
+  #quickSheet h3{font-size:17px;font-weight:700;margin:0 0 18px;letter-spacing:-.01em;}
+
+  /* ── Payment badge ── */
+  .paid-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.03em;}
+  .paid-badge.paid{background:rgba(92,184,122,0.15);color:#5cb87a;}
+  .paid-badge.unpaid{background:rgba(224,92,87,0.12);color:#e05c57;}
+
+  /* ── Payment toggle in detail ── */
+  .pay-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+  .pay-toggle .pay-label{font-size:13.5px;color:var(--text-dim);}
+  .pay-btn{border:1px solid var(--border-mid);background:transparent;color:var(--text-dim);border-radius:20px;padding:5px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .pay-btn.paid{border-color:rgba(92,184,122,0.4);color:#5cb87a;background:rgba(92,184,122,0.1);}
+
   .topbar{position:sticky;top:0;z-index:20;background:rgba(12,15,20,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;}
   .topbar-left .mark{font-size:10px;letter-spacing:.18em;color:var(--steam);font-weight:700;text-transform:uppercase;opacity:.8;}
   .topbar-left h1{font-size:20px;margin:2px 0 0;font-weight:700;letter-spacing:-.02em;}
@@ -143,6 +167,27 @@
 <div class="view" id="view"></div>
 <div class="toast" id="toast"></div>
 
+<!-- FAB quick entry -->
+<button class="fab" id="fabBtn" style="display:none;">+</button>
+
+<!-- Quick entry modal -->
+<div id="quickModal">
+  <div id="quickSheet">
+    <div class="sheet-handle"></div>
+    <h3>Быстрая запись</h3>
+    <label class="f"><span class="flabel">Точка</span>
+      <select id="qPoint"></select>
+    </label>
+    <label class="f"><span class="flabel">Дата</span><input type="date" id="qDate"></label>
+    <label class="f"><span class="flabel">Вес, кг</span><input type="number" id="qKg" placeholder="0" step="0.1"></label>
+    <label class="f"><span class="flabel">Заметка</span><input type="text" id="qNote" placeholder="срочно, доставка..."></label>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-block" id="qCancelBtn">Отмена</button>
+      <button class="btn btn-primary btn-block" id="qSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <div class="tabbar">
   <div class="tab active" data-tab="dashboard"><span class="ic">◉</span>Дашборд</div>
   <div class="tab" data-tab="points"><span class="ic">◼</span>Точки</div>
@@ -197,13 +242,14 @@ const DEFAULT_SETTINGS = {
 // ─── State ───────────────────────────────────────────────────────
 let state = {
   points: [],
-  entries: {},     // pointId → [{id, date, kg, items, note}]
-  restirka: {},    // pointId → [{id, date, qty, kg, rub}]
-  expenses: [],    // [{id, date, category, amount, note}]
-  driverNotes: [], // [{id, date, from, to, km, note}]
+  entries: {},
+  restirka: {},
+  expenses: [],
+  driverNotes: [],
   restirkaItems: DEFAULT_SETTINGS.restirkaItems,
   restirkaTariff: DEFAULT_SETTINGS.restirkaTariff,
   expenseCategories: DEFAULT_SETTINGS.expenseCategories,
+  payments: {},   // 'pointId_monthKey' → true/false
 };
 let isAdmin = false;
 let currentView = {tab:'dashboard', pointId:null, settingPointId:null};
@@ -266,10 +312,22 @@ async function loadAllData(){
   // Driver
   state.driverNotes=[];
   (await getDocs(collection(db,'driverNotes'))).forEach(d=>state.driverNotes.push({...d.data(),id:d.id}));
+
+  // Payments
+  const paydoc = await getDoc(doc(db,'config','payments'));
+  state.payments = paydoc.exists() ? (paydoc.data().map||{}) : {};
 }
 
 async function savePoints(){ await setDoc(doc(db,'config','points'),{list:state.points}); }
 async function saveSettings(){ await setDoc(doc(db,'config','settings'),{restirkaItems:state.restirkaItems,restirkaTariff:state.restirkaTariff,expenseCategories:state.expenseCategories}); }
+async function savePayments(){ await setDoc(doc(db,'config','payments'),{map:state.payments}); }
+function payKey(pointId, mk){ return pointId+'_'+mk; }
+function isPaid(pointId, mk){ return !!state.payments[payKey(pointId,mk)]; }
+async function togglePaid(pointId, mk){
+  const k=payKey(pointId,mk);
+  state.payments[k]=!state.payments[k];
+  await savePayments();
+}
 
 async function addEntry(pointId, data){
   const ref=await addDoc(collection(db,'entries'),{...data,pointId});
@@ -321,7 +379,37 @@ function updateTopbar(){
   document.getElementById('loginBtn').style.display=(!isAdmin&&state.points.length)?'inline':'none';
   document.getElementById('logoutBtn').style.display=isAdmin?'inline':'none';
   document.getElementById('settingsTab').style.display=isAdmin?'':'none';
+  document.getElementById('fabBtn').style.display=isAdmin?'flex':'none';
 }
+
+// ── Quick entry modal ──
+function openQuickModal(){
+  const modal=document.getElementById('quickModal');
+  const sel=document.getElementById('qPoint');
+  sel.innerHTML=state.points.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('qDate').value=todayStr();
+  document.getElementById('qKg').value='';
+  document.getElementById('qNote').value='';
+  modal.classList.add('open');
+  setTimeout(()=>document.getElementById('qKg').focus(),300);
+}
+function closeQuickModal(){ document.getElementById('quickModal').classList.remove('open'); }
+
+document.getElementById('fabBtn').addEventListener('click', openQuickModal);
+document.getElementById('qCancelBtn').addEventListener('click', closeQuickModal);
+document.getElementById('quickModal').addEventListener('click', e=>{ if(e.target===document.getElementById('quickModal')) closeQuickModal(); });
+document.getElementById('qSaveBtn').addEventListener('click', async()=>{
+  const pid=document.getElementById('qPoint').value;
+  const date=document.getElementById('qDate').value||todayStr();
+  const kg=parseFloat(document.getElementById('qKg').value)||0;
+  const note=document.getElementById('qNote').value.trim();
+  if(!kg){ showToast('Укажи вес'); return; }
+  document.getElementById('qSaveBtn').textContent='Сохраняю...';
+  await addEntry(pid,{date,kg,items:{},note});
+  closeQuickModal();
+  showToast('✓ Запись добавлена');
+  render();
+});
 
 document.getElementById('authLoginBtn').addEventListener('click', async()=>{
   const email=document.getElementById('authEmail').value.trim();
@@ -391,13 +479,14 @@ function renderDashboard(el){
   let tKg=0,tRub=0,tDays=0;
   state.points.forEach(p=>{ const t=pointMonthTotals(p.id,mk); tKg+=parseFloat(t.kg)||0; tRub+=t.rub; tDays+=t.days; });
   const expRub=state.expenses.filter(e=>monthKey(e.date)===mk).reduce((s,e)=>s+(e.amount||0),0);
+  const unpaidCount=state.points.filter(p=>pointMonthTotals(p.id,mk).rub>0&&!isPaid(p.id,mk)).length;
   const restRub=Object.values(state.restirka).flat().filter(r=>monthKey(r.date)===mk).reduce((s,r)=>s+(r.rub||0),0);
   el.innerHTML=`
     <div class="grid2">
       <div class="stat"><div class="label">Кг за месяц</div><div class="val steam">${fmt(tKg)}</div><div class="stat-accent steam"></div></div>
       <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(tRub)}</div><div class="stat-accent amber"></div></div>
       <div class="stat"><div class="label">Выездов</div><div class="val">${tDays}</div></div>
-      <div class="stat"><div class="label">Расходы</div><div class="val">${rub(expRub)}</div></div>
+      <div class="stat"><div class="label">Не оплачено</div><div class="val" style="color:${unpaidCount>0?'var(--red)':'var(--green)'}">${unpaidCount}</div><div class="sub2">${unpaidCount>0?'точек ждут оплату':'все оплачено'}</div></div>
     </div>
     <div class="section-title"><span>Точки · месяц</span><span class="more" id="dashMore">все →</span></div>
     <div id="dashPts"></div>
@@ -412,8 +501,23 @@ function mkPointCard(p,t,i){
   const div=document.createElement('div');
   div.className='point-card';
   const color=DOT_COLORS[i%DOT_COLORS.length];
+  const mk=thisMonth();
+  const paid=isPaid(p.id,mk);
+  const hasMoney=t.rub>0;
+  const badgeHtml=hasMoney
+    ? `<div class="paid-badge ${paid?'paid':'unpaid'}">${paid?'✓ Оплачено':'Не оплачено'}</div>`
+    : '';
   const meta=t.kgRest>0?`${t.kgMain} + ${t.kgRest}п кг · ${t.days} вых.`:`${t.kg} кг · ${t.days} вых.`;
-  div.innerHTML=`<div class="point-accent" style="background:${color};box-shadow:0 0 8px ${color}60;"></div><div style="flex:1;min-width:0;"><div class="pname">${p.name}</div><div class="pmeta">${meta}</div></div><div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div><div class="chev">›</div>`;
+  div.innerHTML=`
+    <div class="point-accent" style="background:${color};box-shadow:0 0 8px ${color}60;"></div>
+    <div style="flex:1;min-width:0;">
+      <div class="pname">${p.name}</div>
+      <div class="pmeta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span>${meta}</span>${badgeHtml}
+      </div>
+    </div>
+    <div class="pmoney"><div class="amt">${rub(t.rub)}</div><div class="amt-sub">${t.subLabel}</div></div>
+    <div class="chev">›</div>`;
   div.onclick=()=>{ currentView={tab:'points',pointId:p.id,settingPointId:null}; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='points')); render(); };
   return div;
 }
@@ -435,11 +539,18 @@ function renderPoints(el){
 function renderPointDetail(el){
   const p=state.points.find(x=>x.id===currentView.pointId);
   const mk=thisMonth(); const t=pointMonthTotals(p.id,mk);
+  const paid=isPaid(p.id,mk);
   el.innerHTML=`
     <div class="back-row"><span class="back-btn" id="backBtn">‹ Точки</span><button class="btn btn-sm" id="expPtBtn">⬇ Excel</button></div>
     <div class="grid2">
-      <div class="stat"><div class="label">Кг месяц</div><div class="val steam">${t.kg}</div>${t.kgRest>0?`<div class="sub2">${t.kgMain} + ${t.kgRest} перест.</div>`:''}</div>
-      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div><div class="sub2">${t.kgRest>0?rub(t.rubMain)+' + '+rub(t.rubRest)+' п.':t.subLabel}</div></div>
+      <div class="stat"><div class="label">Кг месяц</div><div class="val steam">${t.kg}</div>${t.kgRest>0?`<div class="sub2">${t.kgMain} + ${t.kgRest} перест.</div>`:''}<div class="stat-accent steam"></div></div>
+      <div class="stat"><div class="label">К оплате</div><div class="val amber">${rub(t.rub)}</div><div class="sub2">${t.kgRest>0?rub(t.rubMain)+' + '+rub(t.rubRest)+' п.':t.subLabel}</div><div class="stat-accent amber"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="pay-toggle">
+        <span class="pay-label">Статус оплаты за месяц</span>
+        <button class="pay-btn ${paid?'paid':''}" id="payToggleBtn">${paid?'✓ Оплачено':'Не оплачено'}</button>
+      </div>
     </div>
     ${isAdmin?`
     <div class="card" style="margin-top:14px;">
@@ -456,6 +567,10 @@ function renderPointDetail(el){
   `;
   el.querySelector('#backBtn').onclick=()=>{ currentView.pointId=null; render(); };
   el.querySelector('#expPtBtn').onclick=()=>exportPointExcel(p.id);
+  el.querySelector('#payToggleBtn').onclick=async()=>{
+    await togglePaid(p.id,mk);
+    render();
+  };
 
   if(isAdmin){
     const ifld=el.querySelector('#itemFields');
